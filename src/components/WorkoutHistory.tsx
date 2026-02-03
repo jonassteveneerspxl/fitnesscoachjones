@@ -1,7 +1,7 @@
 import { WorkoutLog } from "@/types/workout";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Dumbbell, Calendar, Trophy } from "lucide-react";
+import { Dumbbell, Calendar } from "lucide-react";
 
 interface WorkoutHistoryProps {
   logs: WorkoutLog[];
@@ -25,7 +25,7 @@ export function WorkoutHistory({ logs }: WorkoutHistoryProps) {
           key={log.id}
           className="p-4 rounded-xl gradient-card border border-border hover:border-primary/50 transition-colors"
         >
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-3">
             <h4 className="font-semibold text-foreground">{log.exercise}</h4>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Calendar className="w-3 h-3" />
@@ -33,15 +33,22 @@ export function WorkoutHistory({ logs }: WorkoutHistoryProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>{log.weight} kg</span>
-            <span>×</span>
-            <span>
-              {log.sets} sets × {log.reps} reps
-            </span>
+          {/* Sets breakdown */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            {log.sets.map((set, idx) => (
+              <div
+                key={idx}
+                className="px-2 py-1 rounded-md bg-muted text-sm"
+              >
+                <span className="text-muted-foreground">Set {idx + 1}:</span>{" "}
+                <span className="font-medium text-foreground">
+                  {set.weight}kg × {set.reps}
+                </span>
+              </div>
+            ))}
           </div>
 
-          <div className="flex items-center gap-4 mt-2 pt-2 border-t border-border/50">
+          <div className="flex items-center gap-4 pt-2 border-t border-border/50">
             <div className="flex items-center gap-1">
               <span className="text-xs text-muted-foreground">Vol:</span>
               <span className="text-sm font-medium text-foreground">
@@ -49,7 +56,7 @@ export function WorkoutHistory({ logs }: WorkoutHistoryProps) {
               </span>
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">1RM:</span>
+              <span className="text-xs text-muted-foreground">Beste 1RM:</span>
               <span className="text-sm font-medium text-primary">
                 {log.estimated1RM} kg
               </span>

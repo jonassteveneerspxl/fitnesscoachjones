@@ -3,14 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dumbbell, Plus } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
+import { SetData } from "@/types/workout";
 
 interface WorkoutFormProps {
   onSubmit: (data: {
     exercise: string;
-    weight: number;
-    reps: number;
-    sets: number;
+    sets: SetData[];
     notes?: string;
   }) => void;
   isLoading?: boolean;
@@ -27,28 +26,51 @@ const popularExercises = [
 
 export function WorkoutForm({ onSubmit, isLoading }: WorkoutFormProps) {
   const [exercise, setExercise] = useState("");
-  const [weight, setWeight] = useState("");
-  const [reps, setReps] = useState("");
-  const [sets, setSets] = useState("3");
+  const [sets, setSets] = useState<{ weight: string; reps: string }[]>([
+    { weight: "", reps: "" },
+  ]);
   const [notes, setNotes] = useState("");
+
+  const addSet = () => {
+    // Copy weight from last set for convenience
+    const lastSet = sets[sets.length - 1];
+    setSets([...sets, { weight: lastSet?.weight || "", reps: "" }]);
+  };
+
+  const removeSet = (index: number) => {
+    if (sets.length > 1) {
+      setSets(sets.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateSet = (index: number, field: "weight" | "reps", value: string) => {
+    const newSets = [...sets];
+    newSets[index][field] = value;
+    setSets(newSets);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!exercise || !weight || !reps || !sets) return;
+    if (!exercise) return;
+
+    const validSets = sets
+      .filter((s) => s.weight && s.reps)
+      .map((s) => ({
+        weight: parseFloat(s.weight),
+        reps: parseInt(s.reps),
+      }));
+
+    if (validSets.length === 0) return;
 
     onSubmit({
       exercise,
-      weight: parseFloat(weight),
-      reps: parseInt(reps),
-      sets: parseInt(sets),
+      sets: validSets,
       notes: notes || undefined,
     });
 
     // Reset form
     setExercise("");
-    setWeight("");
-    setReps("");
-    setSets("3");
+    setSets([{ weight: "", reps: "" }]);
     setNotes("");
   };
 
@@ -80,50 +102,63 @@ export function WorkoutForm({ onSubmit, isLoading }: WorkoutFormProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="weight" className="text-foreground/80">
-            Gewicht (kg)
-          </Label>
-          <Input
-            id="weight"
-            type="number"
-            step="0.5"
-            value={weight}
-            onChange={(e) => setWeight(e.target.value)}
-            placeholder="80"
-            className="bg-secondary border-border focus:ring-primary"
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="sets" className="text-foreground/80">
-            Sets
-          </Label>
-          <Input
-            id="sets"
-            type="number"
-            value={sets}
-            onChange={(e) => setSets(e.target.value)}
-            placeholder="3"
-            className="bg-secondary border-border focus:ring-primary"
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="reps" className="text-foreground/80">
-            Reps
-          </Label>
-          <Input
-            id="reps"
-            type="number"
-            value={reps}
-            onChange={(e) => setReps(e.target.value)}
-            placeholder="8"
-            className="bg-secondary border-border focus:ring-primary"
-            required
-          />
-        </div>
+      {/* Sets */}
+      <div className="space-y-3">
+        <Label className="text-foreground/80">Sets</Label>
+        
+        {sets.map((set, index) => (
+          <div key={index} className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
+              {index + 1}
+            </div>
+            <div className="flex-1 grid grid-cols-2 gap-2">
+              <div className="relative">
+                <Input
+                  type="number"
+                  step="0.5"
+                  value={set.weight}
+                  onChange={(e) => updateSet(index, "weight", e.target.value)}
+                  placeholder="Gewicht"
+                  className="bg-secondary border-border focus:ring-primary pr-8"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  kg
+                </span>
+              </div>
+              <div className="relative">
+                <Input
+                  type="number"
+                  value={set.reps}
+                  onChange={(e) => updateSet(index, "reps", e.target.value)}
+                  placeholder="Reps"
+                  className="bg-secondary border-border focus:ring-primary pr-10"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  reps
+                </span>
+              </div>
+            </div>
+            {sets.length > 1 && (
+              <button
+                type="button"
+                onClick={() => removeSet(index)}
+                className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        ))}
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={addSet}
+          className="w-full border-dashed border-border hover:border-primary hover:bg-primary/10"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Set toevoegen
+        </Button>
       </div>
 
       <div className="space-y-2">

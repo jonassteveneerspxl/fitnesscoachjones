@@ -3,8 +3,8 @@ import { WorkoutForm } from "@/components/WorkoutForm";
 import { CoachFeedback } from "@/components/CoachFeedback";
 import { WorkoutHistory } from "@/components/WorkoutHistory";
 import { useWorkoutLogs } from "@/hooks/useWorkoutLogs";
-import { generateCoachResponse, calculate1RM, calculateVolume } from "@/utils/fitnessCalculations";
-import { CoachResponse, WorkoutLog } from "@/types/workout";
+import { generateCoachResponse, calculateVolumeFromSets, getBest1RMFromSets } from "@/utils/fitnessCalculations";
+import { CoachResponse, WorkoutLog, SetData } from "@/types/workout";
 import { Dumbbell, History, Sparkles } from "lucide-react";
 
 const Index = () => {
@@ -13,27 +13,17 @@ const Index = () => {
 
   const handleWorkoutSubmit = (data: {
     exercise: string;
-    weight: number;
-    reps: number;
-    sets: number;
+    sets: SetData[];
     notes?: string;
   }) => {
-    const response = generateCoachResponse(
-      data.exercise,
-      data.weight,
-      data.reps,
-      data.sets,
-      logs
-    );
+    const response = generateCoachResponse(data.exercise, data.sets, logs);
 
     setCoachResponse(response);
 
     const newLog: WorkoutLog = {
       id: crypto.randomUUID(),
-      userId: "user-1", // In a real app, this would come from auth
+      userId: "user-1",
       exercise: data.exercise,
-      weight: data.weight,
-      reps: data.reps,
       sets: data.sets,
       date: new Date().toISOString(),
       notes: data.notes,
