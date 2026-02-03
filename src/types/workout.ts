@@ -1,10 +1,13 @@
+export interface SetData {
+  weight: number;
+  reps: number;
+}
+
 export interface WorkoutLog {
   id: string;
   userId: string;
   exercise: string;
-  weight: number;
-  reps: number;
-  sets: number;
+  sets: SetData[];
   date: string;
   notes?: string;
   volume: number;

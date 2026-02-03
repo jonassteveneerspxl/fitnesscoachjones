@@ -1,4 +1,4 @@
-import { WorkoutLog, CoachResponse } from "@/types/workout";
+import { WorkoutLog, CoachResponse, SetData } from "@/types/workout";
 
 // Epley formula for 1RM estimation
 export function calculate1RM(weight: number, reps: number): number {
@@ -6,14 +6,17 @@ export function calculate1RM(weight: number, reps: number): number {
   return Math.round(weight * (1 + reps / 30));
 }
 
-export function calculateVolume(sets: number, reps: number, weight: number): number {
-  return sets * reps * weight;
+export function calculateVolumeFromSets(sets: SetData[]): number {
+  return sets.reduce((total, set) => total + set.weight * set.reps, 0);
+}
+
+export function getBest1RMFromSets(sets: SetData[]): number {
+  return Math.max(...sets.map((set) => calculate1RM(set.weight, set.reps)));
 }
 
 export function checkForPR(
   exercise: string,
-  weight: number,
-  reps: number,
+  sets: SetData[],
   previousLogs: WorkoutLog[]
 ): boolean {
   const exerciseLogs = previousLogs.filter(
@@ -22,7 +25,7 @@ export function checkForPR(
 
   if (exerciseLogs.length === 0) return true; // First time = PR!
 
-  const current1RM = calculate1RM(weight, reps);
+  const current1RM = getBest1RMFromSets(sets);
   const maxPrevious1RM = Math.max(...exerciseLogs.map((log) => log.estimated1RM));
 
   return current1RM > maxPrevious1RM;
@@ -44,14 +47,12 @@ const motivationalMessages = [
 
 export function generateCoachResponse(
   exercise: string,
-  weight: number,
-  reps: number,
-  sets: number,
+  sets: SetData[],
   previousLogs: WorkoutLog[]
 ): CoachResponse {
-  const volume = calculateVolume(sets, reps, weight);
-  const estimated1RM = calculate1RM(weight, reps);
-  const newPR = checkForPR(exercise, weight, reps, previousLogs);
+  const volume = calculateVolumeFromSets(sets);
+  const estimated1RM = getBest1RMFromSets(sets);
+  const newPR = checkForPR(exercise, sets, previousLogs);
 
   let message: string;
   if (newPR) {
