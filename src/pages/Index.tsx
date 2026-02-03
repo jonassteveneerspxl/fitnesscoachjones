@@ -3,35 +3,27 @@ import { WorkoutForm } from "@/components/WorkoutForm";
 import { CoachFeedback } from "@/components/CoachFeedback";
 import { WorkoutHistory } from "@/components/WorkoutHistory";
 import { useWorkoutLogs } from "@/hooks/useWorkoutLogs";
-import { generateCoachResponse, calculateVolumeFromSets, getBest1RMFromSets } from "@/utils/fitnessCalculations";
-import { CoachResponse, WorkoutLog, SetData } from "@/types/workout";
+import { generateCoachResponse } from "@/utils/fitnessCalculations";
+import { CoachResponse, Workout, ExerciseLog } from "@/types/workout";
 import { Dumbbell, History, Sparkles } from "lucide-react";
 
 const Index = () => {
-  const { logs, addLog, getRecentLogs } = useWorkoutLogs();
+  const { workouts, addWorkout, getRecentWorkouts } = useWorkoutLogs();
   const [coachResponse, setCoachResponse] = useState<CoachResponse | null>(null);
 
-  const handleWorkoutSubmit = (data: {
-    exercise: string;
-    sets: SetData[];
-    notes?: string;
-  }) => {
-    const response = generateCoachResponse(data.exercise, data.sets, logs);
-
+  const handleWorkoutSubmit = (exercises: ExerciseLog[]) => {
+    const response = generateCoachResponse(exercises, workouts);
     setCoachResponse(response);
 
-    const newLog: WorkoutLog = {
+    const newWorkout: Workout = {
       id: crypto.randomUUID(),
       userId: "user-1",
-      exercise: data.exercise,
-      sets: data.sets,
       date: new Date().toISOString(),
-      notes: data.notes,
-      volume: response.volume,
-      estimated1RM: response.estimated1RM,
+      exercises,
+      totalVolume: response.totalVolume,
     };
 
-    addLog(newLog);
+    addWorkout(newWorkout);
   };
 
   return (
@@ -56,7 +48,7 @@ const Index = () => {
         <section className="p-6 rounded-2xl gradient-card border border-border">
           <div className="flex items-center gap-2 mb-6">
             <Sparkles className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold text-foreground">Log Workout</h2>
+            <h2 className="text-lg font-semibold text-foreground">Nieuwe Workout</h2>
           </div>
           <WorkoutForm onSubmit={handleWorkoutSubmit} />
         </section>
@@ -70,7 +62,7 @@ const Index = () => {
             <History className="w-5 h-5 text-primary" />
             <h2 className="text-lg font-semibold text-foreground">Recente Workouts</h2>
           </div>
-          <WorkoutHistory logs={getRecentLogs(5)} />
+          <WorkoutHistory workouts={getRecentWorkouts(5)} />
         </section>
       </main>
     </div>

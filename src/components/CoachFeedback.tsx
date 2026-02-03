@@ -8,10 +8,13 @@ interface CoachFeedbackProps {
 export function CoachFeedback({ response }: CoachFeedbackProps) {
   if (!response) return null;
 
+  const hasPR = response.exercises.some((e) => e.newPR);
+  const prExercises = response.exercises.filter((e) => e.newPR);
+
   return (
     <div
       className={`rounded-xl p-6 ${
-        response.newPR
+        hasPR
           ? "gradient-primary glow-primary animate-celebrate"
           : "gradient-card border border-border"
       }`}
@@ -19,10 +22,10 @@ export function CoachFeedback({ response }: CoachFeedbackProps) {
       <div className="flex items-start gap-4">
         <div
           className={`p-3 rounded-full ${
-            response.newPR ? "bg-white/20" : "bg-primary/20"
+            hasPR ? "bg-white/20" : "bg-primary/20"
           }`}
         >
-          {response.newPR ? (
+          {hasPR ? (
             <Trophy className="w-6 h-6 text-white" />
           ) : (
             <Flame className="w-6 h-6 text-primary" />
@@ -31,66 +34,77 @@ export function CoachFeedback({ response }: CoachFeedbackProps) {
         <div className="flex-1">
           <p
             className={`text-lg font-semibold mb-4 ${
-              response.newPR ? "text-white" : "text-foreground"
+              hasPR ? "text-white" : "text-foreground"
             }`}
           >
             {response.message}
           </p>
 
+          {/* PR Badges */}
+          {prExercises.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {prExercises.map((ex, idx) => (
+                <span
+                  key={idx}
+                  className="px-3 py-1 rounded-full bg-white/20 text-white text-sm font-medium"
+                >
+                  🏆 {ex.exercise}: {ex.estimated1RM}kg
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Stats Grid */}
           <div className="grid grid-cols-2 gap-4">
             <div
-              className={`p-4 rounded-lg ${
-                response.newPR ? "bg-white/10" : "bg-muted"
-              }`}
+              className={`p-4 rounded-lg ${hasPR ? "bg-white/10" : "bg-muted"}`}
             >
               <div className="flex items-center gap-2 mb-1">
                 <TrendingUp
                   className={`w-4 h-4 ${
-                    response.newPR ? "text-white/70" : "text-muted-foreground"
+                    hasPR ? "text-white/70" : "text-muted-foreground"
                   }`}
                 />
                 <span
                   className={`text-xs uppercase tracking-wide ${
-                    response.newPR ? "text-white/70" : "text-muted-foreground"
+                    hasPR ? "text-white/70" : "text-muted-foreground"
                   }`}
                 >
-                  Volume
+                  Totaal Volume
                 </span>
               </div>
               <p
                 className={`text-2xl font-bold ${
-                  response.newPR ? "text-white" : "text-foreground"
+                  hasPR ? "text-white" : "text-foreground"
                 }`}
               >
-                {response.volume.toLocaleString()} kg
+                {response.totalVolume.toLocaleString()} kg
               </p>
             </div>
 
             <div
-              className={`p-4 rounded-lg ${
-                response.newPR ? "bg-white/10" : "bg-muted"
-              }`}
+              className={`p-4 rounded-lg ${hasPR ? "bg-white/10" : "bg-muted"}`}
             >
               <div className="flex items-center gap-2 mb-1">
                 <Zap
                   className={`w-4 h-4 ${
-                    response.newPR ? "text-white/70" : "text-muted-foreground"
+                    hasPR ? "text-white/70" : "text-muted-foreground"
                   }`}
                 />
                 <span
                   className={`text-xs uppercase tracking-wide ${
-                    response.newPR ? "text-white/70" : "text-muted-foreground"
+                    hasPR ? "text-white/70" : "text-muted-foreground"
                   }`}
                 >
-                  Est. 1RM
+                  Oefeningen
                 </span>
               </div>
               <p
                 className={`text-2xl font-bold ${
-                  response.newPR ? "text-white" : "text-foreground"
+                  hasPR ? "text-white" : "text-foreground"
                 }`}
               >
-                {response.estimated1RM} kg
+                {response.exercises.length}
               </p>
             </div>
           </div>

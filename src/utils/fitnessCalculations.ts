@@ -1,4 +1,4 @@
-import { WorkoutLog, CoachResponse, SetData } from "@/types/workout";
+import { Workout, ExerciseLog, CoachResponse, SetData } from "@/types/workout";
 
 // Epley formula for 1RM estimation
 export function calculate1RM(weight: number, reps: number): number {
@@ -11,61 +11,77 @@ export function calculateVolumeFromSets(sets: SetData[]): number {
 }
 
 export function getBest1RMFromSets(sets: SetData[]): number {
+  if (sets.length === 0) return 0;
   return Math.max(...sets.map((set) => calculate1RM(set.weight, set.reps)));
 }
 
 export function checkForPR(
   exercise: string,
   sets: SetData[],
-  previousLogs: WorkoutLog[]
+  previousWorkouts: Workout[]
 ): boolean {
-  const exerciseLogs = previousLogs.filter(
-    (log) => log.exercise.toLowerCase() === exercise.toLowerCase()
+  const previousExercises = previousWorkouts.flatMap((w) =>
+    w.exercises.filter(
+      (e) => e.exercise.toLowerCase() === exercise.toLowerCase()
+    )
   );
 
-  if (exerciseLogs.length === 0) return true; // First time = PR!
+  if (previousExercises.length === 0) return true; // First time = PR!
 
   const current1RM = getBest1RMFromSets(sets);
-  const maxPrevious1RM = Math.max(...exerciseLogs.map((log) => log.estimated1RM));
+  const maxPrevious1RM = Math.max(
+    ...previousExercises.map((e) => e.estimated1RM)
+  );
 
   return current1RM > maxPrevious1RM;
 }
 
 const prMessages = [
-  "🔥 Nieuwe PR op {exercise}! Geweldig werk, je wordt sterker!",
-  "💪 BOOM! Nieuw persoonlijk record op {exercise}! Keep crushing it!",
-  "🏆 PR ALERT! {exercise} is naar een nieuw niveau getild!",
+  "🔥 Nieuwe PR op {exercise}! Geweldig werk!",
+  "💪 BOOM! Nieuw persoonlijk record op {exercise}!",
+  "🏆 PR ALERT! {exercise} naar een nieuw niveau!",
   "⚡ Ongelooflijk! Je hebt jezelf overtroffen op {exercise}!",
 ];
 
 const motivationalMessages = [
   "Goed bezig! Blijf consistent en die PR komt vanzelf.",
-  "Sterke set! Volgende keer kunnen we misschien iets meer pushen.",
-  "Mooi werk! Elke rep brengt je dichter bij je doel.",
-  "Solide training! Je bouwt aan een sterker lichaam.",
+  "Sterke workout! Elke rep brengt je dichter bij je doel.",
+  "Mooi werk! Je bouwt aan een sterker lichaam.",
+  "Solide training vandaag!",
 ];
 
 export function generateCoachResponse(
-  exercise: string,
-  sets: SetData[],
-  previousLogs: WorkoutLog[]
+  exercises: ExerciseLog[],
+  previousWorkouts: Workout[]
 ): CoachResponse {
-  const volume = calculateVolumeFromSets(sets);
-  const estimated1RM = getBest1RMFromSets(sets);
-  const newPR = checkForPR(exercise, sets, previousLogs);
+  const exerciseResults = exercises.map((ex) => ({
+    exercise: ex.exercise,
+    volume: ex.volume,
+    estimated1RM: ex.estimated1RM,
+    newPR: checkForPR(ex.exercise, ex.sets, previousWorkouts),
+  }));
+
+  const totalVolume = exercises.reduce((sum, ex) => sum + ex.volume, 0);
+  const hasPR = exerciseResults.some((r) => r.newPR);
 
   let message: string;
-  if (newPR) {
+  if (hasPR) {
+    const prExercises = exerciseResults.filter((r) => r.newPR);
     const randomPR = prMessages[Math.floor(Math.random() * prMessages.length)];
-    message = randomPR.replace("{exercise}", exercise);
+    message = randomPR.replace("{exercise}", prExercises[0].exercise);
+    if (prExercises.length > 1) {
+      message += ` En nog ${prExercises.length - 1} andere PR(s)!`;
+    }
   } else {
-    message = motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)];
+    message =
+      motivationalMessages[
+        Math.floor(Math.random() * motivationalMessages.length)
+      ];
   }
 
   return {
     message,
-    volume,
-    estimated1RM,
-    newPR,
+    exercises: exerciseResults,
+    totalVolume,
   };
 }
