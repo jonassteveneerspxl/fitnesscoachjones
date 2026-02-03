@@ -1,10 +1,23 @@
-import { WorkoutLog } from "@/types/workout";
+import { WorkoutLog, SetData } from "@/types/workout";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Dumbbell, Calendar } from "lucide-react";
 
 interface WorkoutHistoryProps {
   logs: WorkoutLog[];
+}
+
+// Helper to handle old data format
+function getSetsArray(log: WorkoutLog): SetData[] {
+  if (Array.isArray(log.sets)) {
+    return log.sets;
+  }
+  // Old format: sets was a number, we need to reconstruct
+  const oldLog = log as unknown as { sets: number; reps: number; weight: number };
+  return Array.from({ length: oldLog.sets || 1 }, () => ({
+    weight: oldLog.weight || 0,
+    reps: oldLog.reps || 0,
+  }));
 }
 
 export function WorkoutHistory({ logs }: WorkoutHistoryProps) {
@@ -35,7 +48,7 @@ export function WorkoutHistory({ logs }: WorkoutHistoryProps) {
 
           {/* Sets breakdown */}
           <div className="flex flex-wrap gap-2 mb-3">
-            {log.sets.map((set, idx) => (
+            {getSetsArray(log).map((set, idx) => (
               <div
                 key={idx}
                 className="px-2 py-1 rounded-md bg-muted text-sm"
