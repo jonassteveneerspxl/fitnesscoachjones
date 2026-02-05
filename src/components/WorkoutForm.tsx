@@ -40,6 +40,21 @@ export function WorkoutForm({ onSubmit, isLoading }: WorkoutFormProps) {
     setExercises([...updated, createEmptyExercise()]);
   };
 
+  const loadTemplate = (template: WorkoutTemplate) => {
+    const templateExercises: ExerciseFormData[] = template.exercises.map(
+      (ex, index) => ({
+        exercise: ex.exercise,
+        sets: Array.from({ length: ex.suggestedSets }, () => ({
+          weight: "",
+          reps: "",
+        })),
+        notes: "",
+        isExpanded: index === 0, // Only first exercise expanded
+      })
+    );
+    setExercises(templateExercises);
+  };
+
   const removeExercise = (index: number) => {
     if (exercises.length > 1) {
       setExercises(exercises.filter((_, i) => i !== index));
