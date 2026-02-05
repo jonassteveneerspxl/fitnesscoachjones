@@ -143,6 +143,9 @@ export function WorkoutForm({ onSubmit, isLoading }: WorkoutFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Template Selector */}
+      <WorkoutTemplateSelector onSelectTemplate={loadTemplate} />
+
       {exercises.map((exercise, exIndex) => (
         <div
           key={exIndex}
