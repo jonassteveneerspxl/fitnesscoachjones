@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, X, ChevronDown, ChevronUp, Dumbbell } from "lucide-react";
 import { SetData, ExerciseLog } from "@/types/workout";
 import { calculateVolumeFromSets, getBest1RMFromSets } from "@/utils/fitnessCalculations";
+import { ExerciseSelector } from "@/components/ExerciseSelector";
 
 interface ExerciseFormData {
   exercise: string;
@@ -18,15 +19,6 @@ interface WorkoutFormProps {
   onSubmit: (exercises: ExerciseLog[]) => void;
   isLoading?: boolean;
 }
-
-const popularExercises = [
-  "Bench Press",
-  "Squat",
-  "Deadlift",
-  "Shoulder Press",
-  "Barbell Row",
-  "Pull-ups",
-];
 
 const createEmptyExercise = (): ExerciseFormData => ({
   exercise: "",
@@ -181,26 +173,11 @@ export function WorkoutForm({ onSubmit, isLoading }: WorkoutFormProps) {
             <div className="p-4 pt-0 space-y-4">
               {/* Exercise Name */}
               <div className="space-y-2">
-                <Input
+                <ExerciseSelector
                   value={exercise.exercise}
-                  onChange={(e) =>
-                    updateExercise(exIndex, "exercise", e.target.value)
-                  }
-                  placeholder="Naam oefening"
-                  className="bg-background border-border"
+                  onChange={(value) => updateExercise(exIndex, "exercise", value)}
+                  placeholder="Selecteer oefening"
                 />
-                <div className="flex flex-wrap gap-1.5">
-                  {popularExercises.map((ex) => (
-                    <button
-                      key={ex}
-                      type="button"
-                      onClick={() => updateExercise(exIndex, "exercise", ex)}
-                      className="px-2 py-0.5 text-xs rounded-full bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
-                    >
-                      {ex}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               {/* Sets */}
