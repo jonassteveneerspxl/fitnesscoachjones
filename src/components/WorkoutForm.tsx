@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, X, ChevronDown, ChevronUp, Dumbbell } from "lucide-react";
 import { SetData, ExerciseLog } from "@/types/workout";
 import { calculateVolumeFromSets, getBest1RMFromSets } from "@/utils/fitnessCalculations";
+import { ExerciseSelector } from "@/components/ExerciseSelector";
 
 interface ExerciseFormData {
   exercise: string;
@@ -18,15 +19,6 @@ interface WorkoutFormProps {
   onSubmit: (exercises: ExerciseLog[]) => void;
   isLoading?: boolean;
 }
-
-const popularExercises = [
-  "Bench Press",
-  "Squat",
-  "Deadlift",
-  "Shoulder Press",
-  "Barbell Row",
-  "Pull-ups",
-];
 
 const createEmptyExercise = (): ExerciseFormData => ({
   exercise: "",
