@@ -7,6 +7,8 @@ import { Plus, X, ChevronDown, ChevronUp, Dumbbell } from "lucide-react";
 import { SetData, ExerciseLog } from "@/types/workout";
 import { calculateVolumeFromSets, getBest1RMFromSets } from "@/utils/fitnessCalculations";
 import { ExerciseSelector } from "@/components/ExerciseSelector";
+import { WorkoutTemplateSelector } from "@/components/WorkoutTemplateSelector";
+import { WorkoutTemplate } from "@/data/workoutTemplates";
 
 interface ExerciseFormData {
   exercise: string;
