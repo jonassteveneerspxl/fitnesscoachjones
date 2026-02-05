@@ -7,6 +7,8 @@ import { Plus, X, ChevronDown, ChevronUp, Dumbbell } from "lucide-react";
 import { SetData, ExerciseLog } from "@/types/workout";
 import { calculateVolumeFromSets, getBest1RMFromSets } from "@/utils/fitnessCalculations";
 import { ExerciseSelector } from "@/components/ExerciseSelector";
+import { WorkoutTemplateSelector } from "@/components/WorkoutTemplateSelector";
+import { WorkoutTemplate } from "@/data/workoutTemplates";
 
 interface ExerciseFormData {
   exercise: string;
@@ -36,6 +38,21 @@ export function WorkoutForm({ onSubmit, isLoading }: WorkoutFormProps) {
     // Collapse all other exercises
     const updated = exercises.map((ex) => ({ ...ex, isExpanded: false }));
     setExercises([...updated, createEmptyExercise()]);
+  };
+
+  const loadTemplate = (template: WorkoutTemplate) => {
+    const templateExercises: ExerciseFormData[] = template.exercises.map(
+      (ex, index) => ({
+        exercise: ex.exercise,
+        sets: Array.from({ length: ex.suggestedSets }, () => ({
+          weight: "",
+          reps: "",
+        })),
+        notes: "",
+        isExpanded: index === 0, // Only first exercise expanded
+      })
+    );
+    setExercises(templateExercises);
   };
 
   const removeExercise = (index: number) => {
@@ -126,6 +143,9 @@ export function WorkoutForm({ onSubmit, isLoading }: WorkoutFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Template Selector */}
+      <WorkoutTemplateSelector onSelectTemplate={loadTemplate} />
+
       {exercises.map((exercise, exIndex) => (
         <div
           key={exIndex}
