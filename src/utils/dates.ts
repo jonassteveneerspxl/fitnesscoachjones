@@ -97,6 +97,14 @@ export function addDaysToDateKey(dateKey: string, days: number): string {
   return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
 }
 
+/** Telt kalendermaanden bij een kalenderdag op; de dag wordt begrensd tot de laatste dag van de doelmaand (31 mrt − 1 maand = 28 feb). */
+export function addMonthsToDateKey(dateKey: string, months: number): string {
+  const { y, m, d } = parseDateKey(dateKey);
+  const target = new Date(Date.UTC(y, m - 1 + months, 1));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  return `${target.getUTCFullYear()}-${pad2(target.getUTCMonth() + 1)}-${pad2(Math.min(d, lastDay))}`;
+}
+
 export function addMonthsToMonthKey(monthKey: string, months: number): string {
   const [y, m] = monthKey.split("-").map(Number);
   const date = new Date(Date.UTC(y, m - 1 + months, 1));

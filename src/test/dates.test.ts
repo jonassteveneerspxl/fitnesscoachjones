@@ -106,3 +106,14 @@ describe("generateId", () => {
     }
   });
 });
+
+describe("addMonthsToDateKey", () => {
+  it("telt kalendermaanden en begrenst de dag tot de laatste dag van de doelmaand", async () => {
+    const { addMonthsToDateKey } = await import("@/utils/dates");
+    expect(addMonthsToDateKey("2026-05-31", -3)).toBe("2026-02-28");
+    expect(addMonthsToDateKey("2026-03-31", -1)).toBe("2026-02-28");
+    expect(addMonthsToDateKey("2028-03-31", -1)).toBe("2028-02-29"); // schrikkeljaar
+    expect(addMonthsToDateKey("2026-01-15", -2)).toBe("2025-11-15"); // jaarwissel
+    expect(addMonthsToDateKey("2026-11-30", 3)).toBe("2027-02-28");
+  });
+});
