@@ -175,3 +175,17 @@ export function formatMonthLabel(monthKey: string): string {
     year: "numeric",
   }).format(new Date(Date.UTC(y, m - 1, 1)));
 }
+
+/**
+ * "dinsdag 10 maart · 09:30" in de opgeslagen tijdzone (of die van het toestel als die onbekend is).
+ * Geeft `null` terug als de workout geen geldige datum heeft; verzin dan niets.
+ */
+export function describeWorkoutMoment(
+  startedAt: string | null,
+  timeZone: string | null
+): string | null {
+  const instant = parseInstant(startedAt);
+  if (!instant) return null;
+  const tz = isValidTimeZone(timeZone) ? timeZone : getDeviceTimeZone();
+  return `${formatDayLabel(instant, tz)} · ${formatTimeLabel(instant, tz)}`;
+}

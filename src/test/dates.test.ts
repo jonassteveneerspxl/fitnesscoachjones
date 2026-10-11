@@ -96,8 +96,7 @@ describe("generateId", () => {
   it("geeft unieke UUID-achtige ids, ook zonder crypto.randomUUID", () => {
     const original = globalThis.crypto.randomUUID;
     try {
-      // @ts-expect-error simuleer een niet-secure context
-      globalThis.crypto.randomUUID = undefined;
+      (globalThis.crypto as { randomUUID?: unknown }).randomUUID = undefined;
       const a = generateId();
       const b = generateId();
       expect(a).not.toBe(b);
