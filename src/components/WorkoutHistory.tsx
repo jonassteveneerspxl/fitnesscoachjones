@@ -1,14 +1,18 @@
-import { Workout, SetData } from "@/types/workout";
-import { format } from "date-fns";
-import { nl } from "date-fns/locale";
-import { Dumbbell, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { Workout } from "@/types/workout";
+import { Dumbbell, Calendar, ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { describeWorkoutMoment } from "@/utils/dates";
 
 interface WorkoutHistoryProps {
   workouts: Workout[];
+  /** Zonder deze handlers is de lijst alleen-lezen (bv. op de statistiekenpagina). */
+  onEdit?: (workout: Workout) => void;
+  onDelete?: (workout: Workout) => void;
 }
 
-export function WorkoutHistory({ workouts }: WorkoutHistoryProps) {
+export function WorkoutHistory({ workouts, onEdit, onDelete }: WorkoutHistoryProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (workouts.length === 0) {
@@ -40,13 +44,20 @@ export function WorkoutHistory({ workouts }: WorkoutHistoryProps) {
                 <Dumbbell className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <p className="font-semibold text-foreground">
-                  {workout.exercises.length} oefening
-                  {workout.exercises.length !== 1 ? "en" : ""}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-foreground">
+                    {workout.exercises.length} oefening
+                    {workout.exercises.length !== 1 ? "en" : ""}
+                  </p>
+                  {workout.trainingType !== "Onbekend" && (
+                    <Badge variant="outline" className="text-xs">
+                      {workout.trainingType}
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Calendar className="w-3 h-3" />
-                  {format(new Date(workout.date), "EEEE d MMMM", { locale: nl })}
+                  {describeWorkoutMoment(workout.startedAt, workout.timeZone) ?? "Datum onbekend"}
                 </div>
               </div>
             </div>
@@ -105,6 +116,36 @@ export function WorkoutHistory({ workouts }: WorkoutHistoryProps) {
                   )}
                 </div>
               ))}
+
+              {(onEdit || onDelete) && (
+                <div className="flex gap-2 pt-1">
+                  {onEdit && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onEdit(workout)}
+                      aria-label="Workout bewerken"
+                    >
+                      <Pencil className="w-3 h-3 mr-1" />
+                      Bewerken
+                    </Button>
+                  )}
+                  {onDelete && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(workout)}
+                      className="text-muted-foreground hover:text-destructive"
+                      aria-label="Workout verwijderen"
+                    >
+                      <Trash2 className="w-3 h-3 mr-1" />
+                      Verwijderen
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

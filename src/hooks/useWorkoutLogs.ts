@@ -1,66 +1,91 @@
-import { useState, useEffect } from "react";
-import { Workout, WorkoutLog } from "@/types/workout";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { TrashedWorkout, Workout } from "@/types/workout";
+import {
+  ImportResult,
+  LoadStatus,
+  MutationResult,
+  WorkoutChanges,
+  WorkoutRepository,
+  createLocalStorageRepository,
+} from "@/utils/workoutStorage";
 
-const STORAGE_KEY = "fitness-coach-workouts";
+export interface StorageInfo {
+  status: LoadStatus;
+  warnings: string[];
+  readOnly: boolean;
+}
 
-export function useWorkoutLogs() {
+/**
+ * Workouts lezen en wijzigen via een `WorkoutRepository` (standaard localStorage).
+ * Alle wijzigingen gaan via de repository, die vóór elke schrijfactie de actuele opslag leest.
+ */
+export function useWorkoutLogs(repository?: WorkoutRepository) {
+  const repo = useMemo(() => repository ?? createLocalStorageRepository(), [repository]);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [trash, setTrash] = useState<TrashedWorkout[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [storageInfo, setStorageInfo] = useState<StorageInfo>({
+    status: "empty",
+    warnings: [],
+    readOnly: false,
+  });
+  const mounted = useRef(true);
+
+  const reload = useCallback(async () => {
+    const result = await repo.load();
+    if (!mounted.current) return;
+    setWorkouts(result.workouts);
+    setTrash(result.trash);
+    setStorageInfo({ status: result.status, warnings: result.warnings, readOnly: result.readOnly });
+    setIsLoading(false);
+  }, [repo]);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        // Check if it's the new format (array of Workouts with exercises)
-        if (parsed.length > 0 && parsed[0].exercises) {
-          setWorkouts(parsed);
-        } else {
-          // Migrate old format (array of WorkoutLogs) to new format
-          const migrated = migrateOldLogs(parsed);
-          setWorkouts(migrated);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-        }
-      } catch {
-        setWorkouts([]);
+    mounted.current = true;
+    void reload();
+    const unsubscribe = repo.subscribe(() => void reload());
+    return () => {
+      mounted.current = false;
+      unsubscribe();
+    };
+  }, [repo, reload]);
+
+  const apply = useCallback(
+    <T extends MutationResult>(result: T): T => {
+      if (mounted.current) {
+        setWorkouts(result.workouts);
+        setTrash(result.trash);
       }
-    }
-  }, []);
+      return result;
+    },
+    []
+  );
 
-  const migrateOldLogs = (oldLogs: WorkoutLog[]): Workout[] => {
-    // Group old logs by date (same day = same workout)
-    const grouped = oldLogs.reduce((acc, log) => {
-      const dateKey = new Date(log.date).toDateString();
-      if (!acc[dateKey]) {
-        acc[dateKey] = [];
-      }
-      acc[dateKey].push(log);
-      return acc;
-    }, {} as Record<string, WorkoutLog[]>);
+  const addWorkout = useCallback(async (workout: Workout) => apply(await repo.add(workout)), [repo, apply]);
+  const updateWorkout = useCallback(
+    async (id: string, changes: WorkoutChanges) => apply(await repo.update(id, changes)),
+    [repo, apply]
+  );
+  const deleteWorkout = useCallback(async (id: string) => apply(await repo.remove(id)), [repo, apply]);
+  const restoreWorkout = useCallback(async (id: string) => apply(await repo.restore(id)), [repo, apply]);
+  const importWorkouts = useCallback(
+    async (items: unknown[]): Promise<ImportResult> => apply(await repo.importWorkouts(items)),
+    [repo, apply]
+  );
 
-    return Object.entries(grouped).map(([_, logs]) => ({
-      id: logs[0].id,
-      userId: logs[0].userId,
-      date: logs[0].date,
-      exercises: logs.map((log) => ({
-        exercise: log.exercise,
-        sets: Array.isArray(log.sets) ? log.sets : [],
-        notes: log.notes,
-        volume: log.volume || 0,
-        estimated1RM: log.estimated1RM || 0,
-      })),
-      totalVolume: logs.reduce((sum, log) => sum + (log.volume || 0), 0),
-    }));
+  const getRecentWorkouts = (limit: number = 10): Workout[] => workouts.slice(0, limit);
+
+  return {
+    workouts,
+    trash,
+    isLoading,
+    storageInfo,
+    addWorkout,
+    updateWorkout,
+    deleteWorkout,
+    restoreWorkout,
+    importWorkouts,
+    getRecentWorkouts,
+    reload,
   };
-
-  const addWorkout = (workout: Workout) => {
-    const newWorkouts = [workout, ...workouts];
-    setWorkouts(newWorkouts);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newWorkouts));
-  };
-
-  const getRecentWorkouts = (limit: number = 10): Workout[] => {
-    return workouts.slice(0, limit);
-  };
-
-  return { workouts, addWorkout, getRecentWorkouts };
 }

@@ -1,5 +1,6 @@
 import { CoachResponse } from "@/types/workout";
 import { Trophy, TrendingUp, Flame, Zap } from "lucide-react";
+import { PR_LABELS } from "@/utils/fitnessCalculations";
 
 interface CoachFeedbackProps {
   response: CoachResponse | null;
@@ -48,7 +49,7 @@ export function CoachFeedback({ response }: CoachFeedbackProps) {
                   key={idx}
                   className="px-3 py-1 rounded-full bg-white/20 text-white text-sm font-medium"
                 >
-                  🏆 {ex.exercise}: {ex.estimated1RM}kg
+                  🏆 {ex.exercise}: {ex.prTypes.map((t) => PR_LABELS[t]).join(", ")}
                 </span>
               ))}
             </div>
