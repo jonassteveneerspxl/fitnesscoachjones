@@ -1,5 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { format } from "date-fns";
+import { nl } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,6 +35,8 @@ import { calculateVolumeFromSets, getBest1RMFromSets } from "@/utils/fitnessCalc
 import { ExerciseSelector } from "@/components/ExerciseSelector";
 import { WorkoutTemplateSelector } from "@/components/WorkoutTemplateSelector";
 import { WorkoutTemplate } from "@/data/workoutTemplates";
+import { clearDraft, loadDraft, saveDraft } from "@/utils/workoutDraft";
+import { getBrowserStorage } from "@/utils/workoutStorage";
 
 interface ExerciseFormData {
   exercise: string;
@@ -66,15 +81,37 @@ export function WorkoutForm({
   onCancel,
 }: WorkoutFormProps) {
   const isEditing = !!initialWorkout;
+  // Het concept van een lopende nieuwe workout wordt één keer gelezen bij het openen van het formulier, vóór de
+  // eerste render. Zo kan de autosave hieronder het bewaarde concept nooit met een leeg formulier overschrijven.
+  // In bewerkmodus wordt het concept niet gebruikt en niet aangeraakt.
+  const [restoredDraft] = useState(() => (initialWorkout ? null : loadDraft(getBrowserStorage())));
+  const [draftNoticeFrom, setDraftNoticeFrom] = useState<string | null>(restoredDraft?.savedAt ?? null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [exercises, setExercises] = useState<ExerciseFormData[]>(() =>
     initialWorkout && initialWorkout.exercises.length > 0
       ? createFormDataFromWorkout(initialWorkout)
-      : [createEmptyExercise()]
+      : restoredDraft
+        ? restoredDraft.exercises
+        : [createEmptyExercise()]
   );
   const [trainingType, setTrainingType] = useState<TrainingType>(
-    initialWorkout ? initialWorkout.trainingType : "Custom"
+    initialWorkout ? initialWorkout.trainingType : (restoredDraft?.trainingType ?? "Custom")
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Bewaar het lopende formulier bij elke wijziging. Een leeg formulier (na opslaan of weggooien) wist het concept.
+  useEffect(() => {
+    if (isEditing) return;
+    saveDraft(getBrowserStorage(), exercises, trainingType);
+  }, [exercises, trainingType, isEditing]);
+
+  const discardDraft = () => {
+    setExercises([createEmptyExercise()]);
+    setTrainingType("Custom");
+    setDraftNoticeFrom(null);
+    setConfirmDiscard(false);
+    clearDraft(getBrowserStorage());
+  };
 
   const addExercise = () => {
     // Collapse all other exercises
@@ -216,11 +253,54 @@ export function WorkoutForm({
     if (saved !== false && !isEditing) {
       setExercises([createEmptyExercise()]);
       setTrainingType("Custom");
+      setDraftNoticeFrom(null);
+      clearDraft(getBrowserStorage());
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {draftNoticeFrom && !isEditing && (
+        <Alert>
+          <AlertTitle>Concept hersteld</AlertTitle>
+          <AlertDescription className="space-y-2">
+            <p>
+              Je workout is teruggezet zoals je hem achterliet (laatst bewaard op{" "}
+              {format(new Date(draftNoticeFrom), "EEEE d MMMM 'om' HH:mm", { locale: nl })}).
+            </p>
+            <div className="flex gap-2">
+              <Button type="button" size="sm" variant="outline" onClick={() => setDraftNoticeFrom(null)}>
+                Doorgaan
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="link"
+                className="text-destructive"
+                onClick={() => setConfirmDiscard(true)}
+              >
+                Concept weggooien
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <AlertDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Concept weggooien?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Alles wat je nu hebt ingevuld wordt gewist. Dit kun je niet ongedaan maken.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction onClick={discardDraft}>Weggooien</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Template Selector */}
       {!isEditing && <WorkoutTemplateSelector onSelectTemplate={loadTemplate} />}
 
