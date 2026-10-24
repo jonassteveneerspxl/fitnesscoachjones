@@ -35,7 +35,8 @@ import { calculateVolumeFromSets, getBest1RMFromSets } from "@/utils/fitnessCalc
 import { ExerciseSelector } from "@/components/ExerciseSelector";
 import { WorkoutTemplateSelector } from "@/components/WorkoutTemplateSelector";
 import { WorkoutTemplate } from "@/data/workoutTemplates";
-import { clearDraft, loadDraft, saveDraft } from "@/utils/workoutDraft";
+import { clearDraft, draftKeyFor, loadDraft, saveDraft } from "@/utils/workoutDraft";
+import { useOptionalAuth } from "@/context/AuthContext";
 import { getBrowserStorage } from "@/utils/workoutStorage";
 
 interface ExerciseFormData {
@@ -81,10 +82,11 @@ export function WorkoutForm({
   onCancel,
 }: WorkoutFormProps) {
   const isEditing = !!initialWorkout;
+  const draftKey = draftKeyFor(useOptionalAuth()?.user?.uid);
   // Het concept van een lopende nieuwe workout wordt één keer gelezen bij het openen van het formulier, vóór de
   // eerste render. Zo kan de autosave hieronder het bewaarde concept nooit met een leeg formulier overschrijven.
   // In bewerkmodus wordt het concept niet gebruikt en niet aangeraakt.
-  const [restoredDraft] = useState(() => (initialWorkout ? null : loadDraft(getBrowserStorage())));
+  const [restoredDraft] = useState(() => (initialWorkout ? null : loadDraft(getBrowserStorage(), draftKey)));
   const [draftNoticeFrom, setDraftNoticeFrom] = useState<string | null>(restoredDraft?.savedAt ?? null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [exercises, setExercises] = useState<ExerciseFormData[]>(() =>
@@ -102,15 +104,15 @@ export function WorkoutForm({
   // Bewaar het lopende formulier bij elke wijziging. Een leeg formulier (na opslaan of weggooien) wist het concept.
   useEffect(() => {
     if (isEditing) return;
-    saveDraft(getBrowserStorage(), exercises, trainingType);
-  }, [exercises, trainingType, isEditing]);
+    saveDraft(getBrowserStorage(), exercises, trainingType, new Date(), draftKey);
+  }, [exercises, trainingType, isEditing, draftKey]);
 
   const discardDraft = () => {
     setExercises([createEmptyExercise()]);
     setTrainingType("Custom");
     setDraftNoticeFrom(null);
     setConfirmDiscard(false);
-    clearDraft(getBrowserStorage());
+    clearDraft(getBrowserStorage(), draftKey);
   };
 
   const addExercise = () => {
@@ -254,7 +256,7 @@ export function WorkoutForm({
       setExercises([createEmptyExercise()]);
       setTrainingType("Custom");
       setDraftNoticeFrom(null);
-      clearDraft(getBrowserStorage());
+      clearDraft(getBrowserStorage(), draftKey);
     }
   };
 

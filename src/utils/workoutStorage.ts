@@ -42,7 +42,8 @@ export type LoadStatus =
   | "migrated" // oude data gemigreerd naar v2
   | "corrupt" // v2 onleesbaar: in quarantaine gezet
   | "legacy-unreadable" // oude data onleesbaar: onaangeroerd gelaten
-  | "unsupported"; // nieuwere schemaversie: alleen-lezen
+  | "unsupported" // nieuwere schemaversie: alleen-lezen
+  | "unavailable"; // online opslag niet bereikbaar of geweigerd: er is niets gewijzigd
 
 export interface LoadResult {
   workouts: Workout[];

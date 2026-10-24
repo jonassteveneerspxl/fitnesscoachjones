@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useOptionalRepository } from "@/context/RepositoryContext";
 import { TrashedWorkout, Workout } from "@/types/workout";
 import {
   ImportResult,
@@ -20,7 +21,12 @@ export interface StorageInfo {
  * Alle wijzigingen gaan via de repository, die vóór elke schrijfactie de actuele opslag leest.
  */
 export function useWorkoutLogs(repository?: WorkoutRepository) {
-  const repo = useMemo(() => repository ?? createLocalStorageRepository(), [repository]);
+  // Voorrang: expliciet meegegeven repository, dan die van de ingelogde gebruiker, anders localStorage.
+  const accountRepository = useOptionalRepository();
+  const repo = useMemo(
+    () => repository ?? accountRepository ?? createLocalStorageRepository(),
+    [repository, accountRepository]
+  );
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [trash, setTrash] = useState<TrashedWorkout[]>([]);
   const [isLoading, setIsLoading] = useState(true);

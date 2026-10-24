@@ -18,6 +18,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useOptionalAuth } from "@/context/AuthContext";
+import { LocalDataTransfer } from "@/components/LocalDataTransfer";
 import { useWorkoutLogs } from "@/hooks/useWorkoutLogs";
 import { generateCoachResponse } from "@/utils/fitnessCalculations";
 import { describeWorkoutMoment, getDeviceTimeZone } from "@/utils/dates";
@@ -26,6 +28,7 @@ import { CoachResponse, Workout, ExerciseLog, TrainingType } from "@/types/worko
 import { History, Sparkles, Database } from "lucide-react";
 
 const Index = () => {
+  const auth = useOptionalAuth();
   const {
     workouts,
     isLoading,
@@ -51,7 +54,7 @@ const Index = () => {
     const now = new Date();
     const newWorkout: Workout = {
       id: generateId(),
-      userId: "user-1",
+      userId: auth?.user?.uid ?? "user-1", // met een account zet de repository dit sowieso op de uid
       date: now.toISOString(),
       startedAt: now.toISOString(),
       timeZone: getDeviceTimeZone(),
@@ -113,7 +116,8 @@ const Index = () => {
   const hasStorageProblem =
     storageInfo.status === "corrupt" ||
     storageInfo.status === "unsupported" ||
-    storageInfo.status === "legacy-unreadable";
+    storageInfo.status === "legacy-unreadable" ||
+    storageInfo.status === "unavailable";
 
   return (
     <div className="min-h-screen bg-background">
@@ -186,9 +190,11 @@ const Index = () => {
             <h2 className="text-lg font-semibold text-foreground">Gegevens</h2>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Je workouts staan alleen in deze browser. Exporteer ze regelmatig als back-up of om ze naar een
-            ander toestel mee te nemen.
+            {auth?.user
+              ? "Je workouts staan in je account en zijn op elk toestel beschikbaar waar je inlogt. Exporteren kan nog steeds als extra back-up."
+              : "Je workouts staan alleen in deze browser. Exporteer ze regelmatig als back-up of om ze naar een ander toestel mee te nemen."}
           </p>
+          {auth?.user && <LocalDataTransfer onImport={importWorkouts} disabled={storageInfo.readOnly} />}
           <DataManager workouts={workouts} onImport={importWorkouts} disabled={storageInfo.readOnly} />
         </section>
       </main>

@@ -1,6 +1,7 @@
 import { Dumbbell } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
+import { UserMenu } from "@/components/UserMenu";
 
 interface AppHeaderProps {
   /** Breedte van de inhoud, zodat de header aansluit bij de pagina eronder. */
@@ -23,6 +24,7 @@ export function AppHeader({ containerClassName = "max-w-2xl" }: AppHeaderProps) 
             <h1 className="text-xl font-bold text-foreground">Fitness Coach</h1>
             <p className="text-sm text-muted-foreground">Track je gains, breek records</p>
           </div>
+          <UserMenu />
         </div>
         <nav className="mt-3 flex gap-1" aria-label="Hoofdnavigatie">
           <NavLink to="/" end className={linkClass} activeClassName={activeClass}>

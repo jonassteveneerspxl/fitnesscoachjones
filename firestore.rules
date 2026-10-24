@@ -1,0 +1,43 @@
+rules_version = '2';
+
+// Elke gebruiker mag uitsluitend zijn eigen workouts lezen en schrijven: users/{uid}/workouts/{workoutId}.
+// Alles wat hier niet expliciet staat, is geweigerd. Verwijderen kan niet: de app markeert een workout als
+// verwijderd (veld `deletedAt`), zodat een fout of een gestolen sessie nooit gegevens definitief kan wissen.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Velden die na het aanmaken niet meer mogen veranderen (null = onbekend, zoals bij geïmporteerde data).
+    function sameField(field) {
+      return resource.data.get(field, null) == request.resource.data.get(field, null);
+    }
+
+    function validWorkout(uid, workoutId) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['id', 'userId', 'exercises', 'trainingType', 'totalVolume'])
+        && d.id == workoutId
+        && d.userId == uid
+        && d.exercises is list
+        && d.exercises.size() <= 100
+        && d.trainingType is string
+        && d.totalVolume is number
+        && d.keys().size() <= 30;
+    }
+
+    match /users/{uid}/workouts/{workoutId} {
+      allow read: if isOwner(uid);
+
+      allow create: if isOwner(uid) && validWorkout(uid, workoutId);
+
+      allow update: if isOwner(uid) && validWorkout(uid, workoutId)
+        && sameField('startedAt')
+        && sameField('timeZone')
+        && sameField('createdAt');
+
+      allow delete: if false;
+    }
+  }
+}
