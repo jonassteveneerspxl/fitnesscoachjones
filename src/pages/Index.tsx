@@ -150,6 +150,7 @@ const Index = () => {
             <h2 className="text-lg font-semibold text-foreground">Nieuwe Workout</h2>
           </div>
           <WorkoutForm
+            history={workouts}
             onSubmit={handleWorkoutSubmit}
             isLoading={isLoading || storageInfo.readOnly}
           />
