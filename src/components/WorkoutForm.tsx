@@ -38,6 +38,8 @@ import { WorkoutTemplate } from "@/data/workoutTemplates";
 import { clearDraft, draftKeyFor, loadDraft, saveDraft } from "@/utils/workoutDraft";
 import { useOptionalAuth } from "@/context/AuthContext";
 import { getBrowserStorage } from "@/utils/workoutStorage";
+import { LastPerformance, findLastPerformance } from "@/utils/lastPerformance";
+import { describeWorkoutMoment } from "@/utils/dates";
 
 interface ExerciseFormData {
   exercise: string;
@@ -57,7 +59,19 @@ interface WorkoutFormProps {
   initialWorkout?: Workout;
   submitLabel?: string;
   onCancel?: () => void;
+  /** Eerdere workouts: daaruit komt de "vorige keer" per oefening (alleen bij een nieuwe workout). */
+  history?: Workout[];
 }
+
+type FormSet = { weight: string; reps: string };
+
+const setsFromLast = (last: LastPerformance): FormSet[] =>
+  last.sets.map((s) => ({ weight: String(s.weight), reps: String(s.reps) }));
+
+const sameSets = (a: FormSet[], b: FormSet[]) =>
+  a.length === b.length && a.every((s, i) => s.weight === b[i].weight && s.reps === b[i].reps);
+
+const nlNumber = (n: number) => n.toLocaleString("nl-BE", { maximumFractionDigits: 1 });
 
 const createEmptyExercise = (): ExerciseFormData => ({
   exercise: "",
@@ -80,8 +94,10 @@ export function WorkoutForm({
   initialWorkout,
   submitLabel,
   onCancel,
+  history = [],
 }: WorkoutFormProps) {
   const isEditing = !!initialWorkout;
+  const lastFor = (name: string): LastPerformance | null => (isEditing ? null : findLastPerformance(history, name));
   const draftKey = draftKeyFor(useOptionalAuth()?.user?.uid);
   // Het concept van een lopende nieuwe workout wordt één keer gelezen bij het openen van het formulier, vóór de
   // eerste render. Zo kan de autosave hieronder het bewaarde concept nooit met een leeg formulier overschrijven.
@@ -124,15 +140,21 @@ export function WorkoutForm({
   const loadTemplate = (template: WorkoutTemplate) => {
     setTrainingType(template.category);
     const templateExercises: ExerciseFormData[] = template.exercises.map(
-      (ex, index) => ({
+      (ex, index) => {
+        const last = lastFor(ex.exercise);
+        return {
         exercise: ex.exercise,
-        sets: Array.from({ length: ex.suggestedSets }, () => ({
-          weight: "",
-          reps: "",
-        })),
+        // Met geschiedenis: begin bij wat je vorige keer deed. Anders lege sets volgens het template.
+        sets: last
+          ? setsFromLast(last)
+          : Array.from({ length: ex.suggestedSets }, () => ({
+              weight: "",
+              reps: "",
+            })),
         notes: "",
         isExpanded: index === 0, // Only first exercise expanded
-      })
+        };
+      }
     );
     setExercises(templateExercises);
   };
@@ -158,6 +180,24 @@ export function WorkoutForm({
   ) => {
     const updated = [...exercises];
     updated[index] = { ...updated[index], [field]: value };
+    setExercises(updated);
+  };
+
+  /**
+   * Kiest een oefening. Zijn de sets nog leeg (of nog precies de overgenomen waarden van de vorige oefening),
+   * dan worden ze gevuld met wat je vorige keer deed. Wat je zelf hebt ingevuld wordt nooit overschreven.
+   */
+  const selectExercise = (index: number, value: string) => {
+    const current = exercises[index];
+    const lastOld = lastFor(current.exercise);
+    const lastNew = lastFor(value);
+    const untouched = !current.sets.some(isFilled);
+    const isOldPrefill = !!lastOld && sameSets(current.sets, setsFromLast(lastOld));
+    let sets = current.sets;
+    if (lastNew && (untouched || isOldPrefill)) sets = setsFromLast(lastNew);
+    else if (isOldPrefill) sets = [{ weight: "", reps: "" }];
+    const updated = [...exercises];
+    updated[index] = { ...current, exercise: value, sets };
     setExercises(updated);
   };
 
@@ -190,6 +230,49 @@ export function WorkoutForm({
     const updated = [...exercises];
     updated[exerciseIndex].sets[setIndex][field] = value;
     setExercises(updated);
+  };
+
+  const renderLastPerformance = (exIndex: number, exercise: ExerciseFormData) => {
+    const last = lastFor(exercise.exercise);
+    if (!last) return null;
+    const day = describeWorkoutMoment(last.startedAt, last.timeZone)?.split(" · ")[0];
+    const now = exercise.sets.filter(isValidSet).reduce((sum, st) => sum + Number(st.weight) * Number(st.reps), 0);
+    const diff = now - last.volume;
+    const lastSets = setsFromLast(last);
+    return (
+      <div className="rounded-lg bg-primary/10 border border-primary/20 p-3 text-xs space-y-1" data-testid="last-performance">
+        <p className="font-medium text-foreground">Vorige keer{day ? ` · ${day}` : ""}</p>
+        <p className="text-muted-foreground">
+          {last.sets.map((st) => `${nlNumber(st.weight)} kg × ${st.reps}`).join(" · ")}
+        </p>
+        <p className="text-muted-foreground">Volume: {nlNumber(last.volume)} kg</p>
+        {now > 0 && (
+          <p className={diff >= 0 ? "text-primary font-medium" : "text-muted-foreground"}>
+            Nu: {nlNumber(now)} kg ·{" "}
+            {diff > 0
+              ? `+${nlNumber(diff)} kg boven vorige keer`
+              : diff === 0
+                ? "gelijk aan vorige keer"
+                : `nog ${nlNumber(-diff)} kg te gaan om gelijk te komen`}
+          </p>
+        )}
+        {!sameSets(exercise.sets, lastSets) && (
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            className="h-auto p-0 text-xs"
+            onClick={() => {
+              const updated = [...exercises];
+              updated[exIndex] = { ...exercise, sets: lastSets };
+              setExercises(updated);
+            }}
+          >
+            Vorige keer overnemen
+          </Button>
+        )}
+      </div>
+    );
   };
 
   const isFilled = (s: { weight: string; reps: string }) =>
@@ -378,9 +461,10 @@ export function WorkoutForm({
               <div className="space-y-2">
                 <ExerciseSelector
                   value={exercise.exercise}
-                  onChange={(value) => updateExercise(exIndex, "exercise", value)}
+                  onChange={(value) => selectExercise(exIndex, value)}
                   placeholder="Selecteer oefening"
                 />
+                {renderLastPerformance(exIndex, exercise)}
               </div>
 
               {/* Sets */}
