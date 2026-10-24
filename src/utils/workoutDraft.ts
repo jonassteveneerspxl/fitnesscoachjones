@@ -15,6 +15,11 @@ import type { StorageLike } from "@/utils/workoutStorage";
 export const DRAFT_KEY = "fitness-coach-draft-v1";
 export const DRAFT_VERSION = 1;
 
+/** Sleutel voor het concept van een ingelogde gebruiker, zodat twee accounts op één toestel elkaars concept niet zien. */
+export function draftKeyFor(uid?: string | null): string {
+  return uid ? `${DRAFT_KEY}:${uid}` : DRAFT_KEY;
+}
+
 const MAX_EXERCISES = 50;
 const MAX_SETS = 50;
 const MAX_TEXT = 5000;
@@ -74,11 +79,11 @@ function parseExercise(raw: unknown): DraftExercise | null {
 }
 
 /** Leest en valideert het concept. Onleesbare of ongeldige inhoud geeft `null` (en verandert niets in de opslag). */
-export function loadDraft(storage: StorageLike | null): WorkoutDraft | null {
+export function loadDraft(storage: StorageLike | null, key: string = DRAFT_KEY): WorkoutDraft | null {
   if (!storage) return null;
   let text: string | null;
   try {
-    text = storage.getItem(DRAFT_KEY);
+    text = storage.getItem(key);
   } catch {
     return null;
   }
@@ -120,12 +125,13 @@ export function saveDraft(
   storage: StorageLike | null,
   exercises: DraftExercise[],
   trainingType: TrainingType,
-  now: Date = new Date()
+  now: Date = new Date(),
+  key: string = DRAFT_KEY
 ): SaveDraftResult {
   if (!storage) return "error";
   try {
     if (isDraftEmpty(exercises)) {
-      storage.removeItem(DRAFT_KEY);
+      storage.removeItem(key);
       return "cleared";
     }
     const draft: WorkoutDraft = {
@@ -139,17 +145,17 @@ export function saveDraft(
         isExpanded: ex.isExpanded,
       })),
     };
-    storage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    storage.setItem(key, JSON.stringify(draft));
     return "saved";
   } catch {
     return "error";
   }
 }
 
-export function clearDraft(storage: StorageLike | null): void {
+export function clearDraft(storage: StorageLike | null, key: string = DRAFT_KEY): void {
   if (!storage) return;
   try {
-    storage.removeItem(DRAFT_KEY);
+    storage.removeItem(key);
   } catch {
     // Niets te doen: zonder toegankelijke opslag is er ook geen concept.
   }

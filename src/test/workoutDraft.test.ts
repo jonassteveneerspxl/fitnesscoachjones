@@ -172,3 +172,21 @@ describe("robuustheid bij ongeldige of ontbrekende opslag", () => {
     expect(() => clearDraft(throwing)).not.toThrow();
   });
 });
+
+describe("concept per gebruiker", () => {
+  it("bewaart het concept onder de sleutel van de gebruiker en ziet dat van een ander niet", async () => {
+    const { draftKeyFor, saveDraft: save, loadDraft: load, DRAFT_KEY: BASE } = await import("@/utils/workoutDraft");
+    const data = new Map<string, string>();
+    const storage = {
+      getItem: (k: string) => data.get(k) ?? null,
+      setItem: (k: string, v: string) => void data.set(k, v),
+      removeItem: (k: string) => void data.delete(k),
+    };
+    const ex = [{ exercise: "Bench Press", sets: [{ weight: "60", reps: "8" }], notes: "", isExpanded: true }];
+    expect(save(storage, ex as never, "Push", new Date(), draftKeyFor("u1"))).toBe("saved");
+    expect(load(storage, draftKeyFor("u1"))).not.toBeNull();
+    expect(load(storage, draftKeyFor("u2"))).toBeNull();
+    expect(load(storage)).toBeNull();
+    expect(draftKeyFor(null)).toBe(BASE);
+  });
+});
