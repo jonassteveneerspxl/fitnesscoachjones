@@ -114,3 +114,14 @@ describe("vorige keer in het formulier", () => {
     expect(values("Gewicht")).toEqual(["80"]);
   });
 });
+
+describe("vorige keer per set", () => {
+  it("toont per setrij wat je die set vorige keer deed, alleen waar een vorige set bestaat", () => {
+    render(<WorkoutForm onSubmit={vi.fn()} history={[newer]} />);
+    pick("Skull Crushers");
+    fireEvent.click(screen.getByRole("button", { name: /set toevoegen/i }));
+    const hints = screen.getAllByTestId("previous-set").map((e) => e.textContent);
+    expect(hints).toEqual(["Vorige: 40 kg × 10", "Vorige: 40 kg × 9", "Vorige: 40 kg × 8"]);
+    expect(screen.getAllByPlaceholderText("Gewicht")).toHaveLength(4);
+  });
+});

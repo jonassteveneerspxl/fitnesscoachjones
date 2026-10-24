@@ -475,7 +475,8 @@ export function WorkoutForm({
                     <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground">
                       {setIndex + 1}
                     </div>
-                    <div className="flex-1 grid grid-cols-2 gap-2">
+                    <div className="flex-1">
+                    <div className="grid grid-cols-2 gap-2">
                       <div className="relative">
                         <Input
                           type="number"
@@ -510,6 +511,15 @@ export function WorkoutForm({
                           reps
                         </span>
                       </div>
+                    </div>
+                    {(() => {
+                      const prev = lastFor(exercise.exercise)?.sets[setIndex];
+                      return prev ? (
+                        <p className="mt-0.5 text-[11px] text-muted-foreground" data-testid="previous-set">
+                          Vorige: {nlNumber(prev.weight)} kg × {prev.reps}
+                        </p>
+                      ) : null;
+                    })()}
                     </div>
                     {exercise.sets.length > 1 && (
                       <button
