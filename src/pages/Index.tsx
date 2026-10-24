@@ -123,7 +123,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <AppHeader />
 
-      <main className="container max-w-2xl py-6 space-y-8">
+      <main className="container max-w-2xl pt-6 pb-24 space-y-8">
         {(hasStorageProblem || storageInfo.warnings.length > 0) && !dismissedWarnings && (
           <Alert variant={storageInfo.readOnly || hasStorageProblem ? "destructive" : "default"}>
             <AlertTitle>

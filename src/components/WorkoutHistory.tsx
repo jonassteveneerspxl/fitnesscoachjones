@@ -39,13 +39,13 @@ export function WorkoutHistory({ workouts, onEdit, onDelete }: WorkoutHistoryPro
               setExpandedId(expandedId === workout.id ? null : workout.id)
             }
           >
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/20">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="hidden sm:block p-2 rounded-lg bg-primary/20">
                 <Dumbbell className="w-4 h-4 text-primary" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold text-foreground">
+                  <p className="font-semibold text-foreground whitespace-nowrap">
                     {workout.exercises.length} oefening
                     {workout.exercises.length !== 1 ? "en" : ""}
                   </p>
@@ -56,17 +56,17 @@ export function WorkoutHistory({ workouts, onEdit, onDelete }: WorkoutHistoryPro
                   )}
                 </div>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Calendar className="w-3 h-3" />
+                  <Calendar className="w-3 h-3 shrink-0" />
                   {describeWorkoutMoment(workout.startedAt, workout.timeZone) ?? "Datum onbekend"}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 shrink-0">
               <div className="text-right">
-                <p className="text-sm font-medium text-foreground">
+                <p className="text-sm font-medium text-foreground whitespace-nowrap">
                   {workout.totalVolume.toLocaleString()} kg
                 </p>
-                <p className="text-xs text-muted-foreground">totaal volume</p>
+                <p className="hidden sm:block text-xs text-muted-foreground">totaal volume</p>
               </div>
               {expandedId === workout.id ? (
                 <ChevronUp className="w-4 h-4 text-muted-foreground" />
