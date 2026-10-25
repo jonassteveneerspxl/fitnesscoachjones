@@ -38,6 +38,7 @@ import { WorkoutTemplate } from "@/data/workoutTemplates";
 import { clearDraft, draftKeyFor, loadDraft, saveDraft } from "@/utils/workoutDraft";
 import { useOptionalAuth } from "@/context/AuthContext";
 import { getBrowserStorage } from "@/utils/workoutStorage";
+import { DEFAULT_REST_SECONDS, RestTimer } from "@/components/RestTimer";
 import { LastPerformance, findLastPerformance } from "@/utils/lastPerformance";
 import { describeWorkoutMoment } from "@/utils/dates";
 
@@ -117,6 +118,7 @@ export function WorkoutForm({
     initialWorkout ? initialWorkout.trainingType : (restoredDraft?.trainingType ?? "Custom")
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
 
   // Bewaar het lopende formulier bij elke wijziging. Een leeg formulier (na opslaan of weggooien) wist het concept.
   useEffect(() => {
@@ -226,8 +228,11 @@ export function WorkoutForm({
   const toggleSetDone = (exerciseIndex: number, setIndex: number) => {
     const updated = [...exercises];
     const target = updated[exerciseIndex].sets[setIndex];
-    target.done = target.done === false ? true : false;
+    const nowDone = target.done === false;
+    target.done = nowDone ? true : false;
     setExercises(updated);
+    // Een set afvinken start de rust. Alleen in een nieuwe workout, niet bij bewerken.
+    if (nowDone && !isEditing) setRestEndsAt(Date.now() + DEFAULT_REST_SECONDS * 1000);
   };
 
   const updateSet = (
@@ -355,6 +360,7 @@ export function WorkoutForm({
       setExercises([createEmptyExercise()]);
       setTrainingType("Custom");
       setDraftNoticeFrom(null);
+      setRestEndsAt(null);
       clearDraft(getBrowserStorage(), draftKey);
     }
   };
@@ -614,6 +620,9 @@ export function WorkoutForm({
         <Button type="button" variant="ghost" onClick={onCancel} className="w-full">
           Annuleren
         </Button>
+      )}
+      {restEndsAt !== null && !isEditing && (
+        <RestTimer endsAt={restEndsAt} onChange={setRestEndsAt} onClose={() => setRestEndsAt(null)} />
       )}
     </form>
   );
