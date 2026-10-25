@@ -125,3 +125,73 @@ describe("vorige keer per set", () => {
     expect(screen.getAllByPlaceholderText("Gewicht")).toHaveLength(4);
   });
 });
+
+describe("sets afvinken", () => {
+  const onSubmit = vi.fn().mockResolvedValue(true);
+  beforeEach(() => {
+    localStorage.clear();
+    onSubmit.mockClear();
+  });
+  const save = () => fireEvent.click(screen.getByRole("button", { name: /workout opslaan/i }));
+  const check = (n: number) => screen.getByRole("checkbox", { name: new RegExp(`set ${n} `, "i") });
+
+  it("voorgestelde sets staan uit en worden niet opgeslagen zolang je ze niet afvinkt", async () => {
+    render(<WorkoutForm onSubmit={onSubmit} history={[newer]} />);
+    pick("Skull Crushers");
+    expect(check(1).getAttribute("aria-checked")).toBe("false");
+    save();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("slaat alleen de afgevinkte sets op, genummerd vanaf 1", async () => {
+    render(<WorkoutForm onSubmit={onSubmit} history={[newer]} />);
+    pick("Skull Crushers");
+    fireEvent.click(check(1));
+    fireEvent.click(check(3));
+    expect(check(1).getAttribute("aria-checked")).toBe("true");
+    save();
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const sets = onSubmit.mock.calls[0][0][0].sets;
+    expect(sets).toEqual([
+      { setNumber: 1, weight: 40, reps: 10 },
+      { setNumber: 2, weight: 40, reps: 8 },
+    ]);
+  });
+
+  it("zelf iets aanpassen telt als gedaan; opnieuw tikken zet de set weer uit", async () => {
+    render(<WorkoutForm onSubmit={onSubmit} history={[newer]} />);
+    pick("Skull Crushers");
+    fireEvent.change(screen.getAllByPlaceholderText("Reps")[0], { target: { value: "12" } });
+    expect(check(1).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(check(1));
+    expect(check(1).getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("een nieuwe oefening kiezen vervangt voorgestelde sets, maar nooit afgevinkte", () => {
+    render(<WorkoutForm onSubmit={onSubmit} history={[newer]} />);
+    pick("Skull Crushers");
+    fireEvent.click(check(1));
+    pick("Bench Press");
+    expect(values("Gewicht")).toEqual(["40", "40", "40"]);
+  });
+
+  it("sets zonder voorstel (zelf getypt) tellen direct mee, zoals voorheen", async () => {
+    render(<WorkoutForm onSubmit={onSubmit} />);
+    pick("Deadlift");
+    fireEvent.change(screen.getAllByPlaceholderText("Gewicht")[0], { target: { value: "100" } });
+    fireEvent.change(screen.getAllByPlaceholderText("Reps")[0], { target: { value: "5" } });
+    save();
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit.mock.calls[0][0][0].sets).toEqual([{ setNumber: 1, weight: 100, reps: 5 }]);
+  });
+
+  it("het concept onthoudt welke sets nog niet zijn afgevinkt", () => {
+    const a = render(<WorkoutForm onSubmit={onSubmit} history={[newer]} />);
+    pick("Skull Crushers");
+    fireEvent.click(check(2));
+    a.unmount();
+    render(<WorkoutForm onSubmit={onSubmit} history={[newer]} />);
+    expect([1, 2, 3].map((n) => check(n).getAttribute("aria-checked"))).toEqual(["false", "true", "false"]);
+  });
+});

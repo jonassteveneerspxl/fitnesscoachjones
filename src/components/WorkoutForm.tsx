@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, X, ChevronDown, ChevronUp, Dumbbell } from "lucide-react";
+import { Plus, X, ChevronDown, ChevronUp, Dumbbell, Check } from "lucide-react";
 import {
   ExerciseLog,
   SELECTABLE_TRAINING_TYPES,
@@ -43,7 +43,7 @@ import { describeWorkoutMoment } from "@/utils/dates";
 
 interface ExerciseFormData {
   exercise: string;
-  sets: { weight: string; reps: string }[];
+  sets: FormSet[];
   notes: string;
   isExpanded: boolean;
 }
@@ -63,10 +63,11 @@ interface WorkoutFormProps {
   history?: Workout[];
 }
 
-type FormSet = { weight: string; reps: string };
+/** `done: false` = voorgesteld (vorige keer) maar nog niet afgevinkt; zulke sets worden niet opgeslagen. */
+type FormSet = { weight: string; reps: string; done?: false | true };
 
 const setsFromLast = (last: LastPerformance): FormSet[] =>
-  last.sets.map((s) => ({ weight: String(s.weight), reps: String(s.reps) }));
+  last.sets.map((s) => ({ weight: String(s.weight), reps: String(s.reps), done: false as const }));
 
 const sameSets = (a: FormSet[], b: FormSet[]) =>
   a.length === b.length && a.every((s, i) => s.weight === b[i].weight && s.reps === b[i].reps);
@@ -192,7 +193,8 @@ export function WorkoutForm({
     const lastOld = lastFor(current.exercise);
     const lastNew = lastFor(value);
     const untouched = !current.sets.some(isFilled);
-    const isOldPrefill = !!lastOld && sameSets(current.sets, setsFromLast(lastOld));
+    const isOldPrefill =
+      !!lastOld && current.sets.every((st) => st.done === false) && sameSets(current.sets, setsFromLast(lastOld));
     let sets = current.sets;
     if (lastNew && (untouched || isOldPrefill)) sets = setsFromLast(lastNew);
     else if (isOldPrefill) sets = [{ weight: "", reps: "" }];
@@ -221,6 +223,13 @@ export function WorkoutForm({
     }
   };
 
+  const toggleSetDone = (exerciseIndex: number, setIndex: number) => {
+    const updated = [...exercises];
+    const target = updated[exerciseIndex].sets[setIndex];
+    target.done = target.done === false ? true : false;
+    setExercises(updated);
+  };
+
   const updateSet = (
     exerciseIndex: number,
     setIndex: number,
@@ -228,7 +237,9 @@ export function WorkoutForm({
     value: string
   ) => {
     const updated = [...exercises];
-    updated[exerciseIndex].sets[setIndex][field] = value;
+    const target = updated[exerciseIndex].sets[setIndex];
+    target[field] = value;
+    target.done = true; // zelf iets invullen of aanpassen telt als "gedaan"
     setExercises(updated);
   };
 
@@ -308,7 +319,7 @@ export function WorkoutForm({
     const validExercises: ExerciseLog[] = exercises
       .filter((ex) => ex.exercise.trim())
       .map((ex) => {
-        const validSets = ex.sets.filter(isValidSet).map((s, index) => ({
+        const validSets = ex.sets.filter((s) => s.done !== false).filter(isValidSet).map((s, index) => ({
           setNumber: index + 1,
           weight: Number(s.weight),
           reps: Number(s.reps),
@@ -324,7 +335,12 @@ export function WorkoutForm({
       })
       .filter((ex) => ex.sets.length > 0);
 
-    if (validExercises.length === 0) return;
+    if (validExercises.length === 0) {
+      if (exercises.some((ex) => ex.exercise.trim() && ex.sets.some((s) => s.done === false && isValidSet(s)))) {
+        toast.error("Vink de sets af die je gedaan hebt, of pas ze aan, om op te slaan.");
+      }
+      return;
+    }
 
     setIsSubmitting(true);
     let saved: void | boolean = false;
@@ -472,9 +488,24 @@ export function WorkoutForm({
                 <Label className="text-sm text-muted-foreground">Sets</Label>
                 {exercise.sets.map((set, setIndex) => (
                   <div key={setIndex} className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground">
-                      {setIndex + 1}
-                    </div>
+                    {(() => {
+                      const checked = isValidSet(set) && set.done !== false;
+                      return (
+                        <button
+                          type="button"
+                          role="checkbox"
+                          aria-checked={checked}
+                          aria-label={`Set ${setIndex + 1} ${checked ? "afgevinkt" : "afvinken"}`}
+                          disabled={!isValidSet(set)}
+                          onClick={() => toggleSetDone(exIndex, setIndex)}
+                          className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-xs font-medium transition-colors disabled:opacity-60 ${
+                            checked ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/20"
+                          }`}
+                        >
+                          {checked ? <Check className="w-4 h-4" /> : setIndex + 1}
+                        </button>
+                      );
+                    })()}
                     <div className="flex-1">
                     <div className="grid grid-cols-2 gap-2">
                       <div className="relative">

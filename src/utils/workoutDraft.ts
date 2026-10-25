@@ -27,6 +27,8 @@ const MAX_TEXT = 5000;
 export interface DraftSet {
   weight: string;
   reps: string;
+  /** Alleen `false` wordt bewaard: een voorgestelde set (vorige keer) die nog niet is afgevinkt. */
+  done?: boolean;
 }
 
 export interface DraftExercise {
@@ -67,7 +69,7 @@ function parseExercise(raw: unknown): DraftExercise | null {
   const sets: DraftSet[] = [];
   for (const s of raw.sets) {
     if (!isRecord(s) || !isText(s.weight) || !isText(s.reps)) return null;
-    sets.push({ weight: s.weight, reps: s.reps });
+    sets.push(s.done === false ? { weight: s.weight, reps: s.reps, done: false } : { weight: s.weight, reps: s.reps });
   }
   return {
     exercise: raw.exercise,
@@ -140,7 +142,7 @@ export function saveDraft(
       trainingType,
       exercises: exercises.map((ex) => ({
         exercise: ex.exercise,
-        sets: ex.sets.map((s) => ({ weight: s.weight, reps: s.reps })),
+        sets: ex.sets.map((s) => (s.done === false ? { weight: s.weight, reps: s.reps, done: false as const } : { weight: s.weight, reps: s.reps })),
         notes: ex.notes,
         isExpanded: ex.isExpanded,
       })),
