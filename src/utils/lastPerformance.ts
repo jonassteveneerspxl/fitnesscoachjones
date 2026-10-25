@@ -2,7 +2,7 @@
  * "Vorige keer": de meest recente keer dat je een oefening hebt gedaan, zodat je bij het loggen meteen ziet
  * (en kunt overnemen) wat je toen deed en niet lager hoeft te beginnen.
  */
-import { Workout } from "@/types/workout";
+import { TrainingType, Workout } from "@/types/workout";
 import { normalizeExerciseName } from "@/utils/exerciseNames";
 import { summarizeExerciseSets } from "@/utils/fitnessCalculations";
 import { parseInstant } from "@/utils/dates";
@@ -59,4 +59,21 @@ export function findLastPerformance(
     volume: stats.exerciseVolume,
     maxWeight: stats.maxWeight,
   };
+}
+
+/**
+ * De meest recente workout (op starttijd) met minstens één oefening, eventueel van een bepaald trainingstype.
+ * Zonder type of voor "Custom"/"Onbekend" telt elke workout.
+ */
+export function findLastWorkout(workouts: Workout[], trainingType?: TrainingType | null): Workout | null {
+  const anyType = !trainingType || trainingType === "Custom" || trainingType === "Onbekend";
+  let best: { ms: number; workout: Workout } | null = null;
+  for (const workout of workouts) {
+    if (!anyType && workout.trainingType !== trainingType) continue;
+    if (workout.exercises.length === 0) continue;
+    const instant = parseInstant(workout.startedAt);
+    if (!instant) continue;
+    if (!best || instant.getTime() > best.ms) best = { ms: instant.getTime(), workout };
+  }
+  return best?.workout ?? null;
 }

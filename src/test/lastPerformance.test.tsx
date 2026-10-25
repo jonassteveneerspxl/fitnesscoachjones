@@ -2,7 +2,7 @@ import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { WorkoutForm } from "@/components/WorkoutForm";
-import { findLastPerformance } from "@/utils/lastPerformance";
+import { findLastPerformance, findLastWorkout } from "@/utils/lastPerformance";
 import { makeExercise, makeWorkout } from "./factories";
 
 vi.mock("@/components/ExerciseSelector", () => ({
@@ -193,5 +193,44 @@ describe("sets afvinken", () => {
     a.unmount();
     render(<WorkoutForm onSubmit={onSubmit} history={[newer]} />);
     expect([1, 2, 3].map((n) => check(n).getAttribute("aria-checked"))).toEqual(["false", "true", "false"]);
+  });
+});
+
+describe("snelstart", () => {
+  const pull = makeWorkout({
+    id: "p",
+    trainingType: "Pull",
+    startedAt: "2026-10-15T10:00:00.000Z",
+    exercises: [makeExercise("Barbell Row", [[60, 8], [60, 8]]), makeExercise("Lat Pulldown", [[50, 10]])],
+  });
+  beforeEach(() => localStorage.clear());
+
+  it("findLastWorkout kiest de laatste van het type, of de laatste overall bij Custom", () => {
+    const push = makeWorkout({ id: "q", trainingType: "Push", startedAt: "2026-10-20T10:00:00.000Z" });
+    expect(findLastWorkout([pull, push], "Pull")?.id).toBe("p");
+    expect(findLastWorkout([pull, push], "Custom")?.id).toBe("q");
+    expect(findLastWorkout([pull, push], "Legs")).toBeNull();
+    expect(findLastWorkout([], "Pull")).toBeNull();
+  });
+
+  it("laadt de oefeningen van de laatste workout met de sets van vorige keer als voorstel", () => {
+    render(<WorkoutForm onSubmit={vi.fn()} history={[pull]} />);
+    fireEvent.change(screen.getByLabelText("Trainingstype"), { target: { value: "Pull" } });
+    fireEvent.click(screen.getByRole("button", { name: /zelfde als vorige pull/i }));
+    expect((screen.getByLabelText("Oefening") as HTMLInputElement).value).toBe("Barbell Row");
+    expect(values("Gewicht")).toEqual(["60", "60"]);
+    expect(screen.getByRole("checkbox", { name: /set 1 afvinken/i }).getAttribute("aria-checked")).toBe("false");
+    expect(screen.queryByRole("button", { name: /zelfde als/i })).toBeNull();
+  });
+
+  it("verdwijnt zodra je zelf iets invult en in bewerkmodus", () => {
+    const { unmount } = render(<WorkoutForm onSubmit={vi.fn()} history={[pull]} />);
+    expect(screen.getByRole("button", { name: /zelfde als laatste workout/i })).toBeTruthy();
+    fireEvent.change(screen.getAllByPlaceholderText("Gewicht")[0], { target: { value: "20" } });
+    expect(screen.queryByRole("button", { name: /zelfde als/i })).toBeNull();
+    unmount();
+    localStorage.clear();
+    render(<WorkoutForm onSubmit={vi.fn()} history={[pull]} initialWorkout={pull} />);
+    expect(screen.queryByRole("button", { name: /zelfde als/i })).toBeNull();
   });
 });

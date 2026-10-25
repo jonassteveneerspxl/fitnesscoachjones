@@ -39,7 +39,7 @@ import { clearDraft, draftKeyFor, loadDraft, saveDraft } from "@/utils/workoutDr
 import { useOptionalAuth } from "@/context/AuthContext";
 import { getBrowserStorage } from "@/utils/workoutStorage";
 import { DEFAULT_REST_SECONDS, RestTimer } from "@/components/RestTimer";
-import { LastPerformance, findLastPerformance } from "@/utils/lastPerformance";
+import { LastPerformance, findLastPerformance, findLastWorkout } from "@/utils/lastPerformance";
 import { describeWorkoutMoment } from "@/utils/dates";
 
 interface ExerciseFormData {
@@ -160,6 +160,22 @@ export function WorkoutForm({
       }
     );
     setExercises(templateExercises);
+  };
+
+  /** Snelstart: dezelfde oefeningen als de laatste workout van dit type, met de sets van de vorige keer als voorstel. */
+  const startFromLast = (workout: Workout) => {
+    setTrainingType(workout.trainingType);
+    setExercises(
+      workout.exercises.map((ex, index) => {
+        const last = lastFor(ex.exercise);
+        return {
+          exercise: ex.exercise,
+          sets: last ? setsFromLast(last) : [{ weight: "", reps: "" }],
+          notes: "",
+          isExpanded: index === 0,
+        };
+      })
+    );
   };
 
   const removeExercise = (index: number) => {
@@ -365,6 +381,10 @@ export function WorkoutForm({
     }
   };
 
+  // De snelstart verschijnt alleen bij een leeg formulier, zodat hij nooit iets overschrijft wat je al hebt ingevuld.
+  const formIsEmpty = exercises.every((ex) => !ex.exercise.trim() && !ex.notes.trim() && !ex.sets.some(isFilled));
+  const quickStartTarget = !isEditing && formIsEmpty ? findLastWorkout(history, trainingType) : null;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {draftNoticeFrom && !isEditing && (
@@ -409,6 +429,25 @@ export function WorkoutForm({
       </AlertDialog>
 
       {/* Template Selector */}
+      {quickStartTarget && (
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-auto py-3 flex-col gap-0.5 border-primary/40 bg-primary/10 hover:bg-primary/20"
+          onClick={() => startFromLast(quickStartTarget)}
+        >
+          <span className="font-semibold">
+            {trainingType === "Custom" || trainingType === "Onbekend"
+              ? "Zelfde als laatste workout"
+              : `Zelfde als vorige ${trainingType}`}
+          </span>
+          <span className="text-xs font-normal text-muted-foreground">
+            {quickStartTarget.trainingType !== "Onbekend" ? `${quickStartTarget.trainingType} · ` : ""}
+            {describeWorkoutMoment(quickStartTarget.startedAt, quickStartTarget.timeZone)?.split(" · ")[0]} ·{" "}
+            {quickStartTarget.exercises.length} oefening{quickStartTarget.exercises.length === 1 ? "" : "en"}
+          </span>
+        </Button>
+      )}
       {!isEditing && <WorkoutTemplateSelector onSelectTemplate={loadTemplate} />}
 
       {/* Training type */}
