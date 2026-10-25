@@ -132,7 +132,7 @@ const Statistics = () => {
     return (
       <div className="min-h-screen bg-background">
         {header}
-        <main className="container max-w-3xl py-6">
+        <main className="container max-w-3xl pt-6 pb-24">
           <p className="text-sm text-muted-foreground">Gegevens laden…</p>
         </main>
       </div>
@@ -143,7 +143,7 @@ const Statistics = () => {
     return (
       <div className="min-h-screen bg-background">
         {header}
-        <main className="container max-w-3xl py-6">
+        <main className="container max-w-3xl pt-6 pb-24">
           <section className="p-8 rounded-2xl gradient-card border border-border text-center space-y-3">
             <BarChart3 className="w-10 h-10 mx-auto text-muted-foreground" aria-hidden />
             <h2 className="text-lg font-semibold text-foreground">Nog geen statistieken</h2>
@@ -167,7 +167,7 @@ const Statistics = () => {
     <div className="min-h-screen bg-background">
       {header}
 
-      <main className="container max-w-3xl py-6 space-y-6">
+      <main className="container max-w-3xl pt-6 pb-24 space-y-6">
         {(storageInfo.warnings.length > 0 || storageInfo.readOnly) && (
           <Alert variant="destructive">
             <AlertTitle>Let op bij het laden van je gegevens</AlertTitle>

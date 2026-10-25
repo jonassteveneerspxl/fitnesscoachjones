@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, X, ChevronDown, ChevronUp, Dumbbell } from "lucide-react";
+import { Plus, X, ChevronDown, ChevronUp, Dumbbell, Check } from "lucide-react";
 import {
   ExerciseLog,
   SELECTABLE_TRAINING_TYPES,
@@ -38,10 +38,13 @@ import { WorkoutTemplate } from "@/data/workoutTemplates";
 import { clearDraft, draftKeyFor, loadDraft, saveDraft } from "@/utils/workoutDraft";
 import { useOptionalAuth } from "@/context/AuthContext";
 import { getBrowserStorage } from "@/utils/workoutStorage";
+import { DEFAULT_REST_SECONDS, RestTimer } from "@/components/RestTimer";
+import { LastPerformance, findLastPerformance, findLastWorkout } from "@/utils/lastPerformance";
+import { describeWorkoutMoment } from "@/utils/dates";
 
 interface ExerciseFormData {
   exercise: string;
-  sets: { weight: string; reps: string }[];
+  sets: FormSet[];
   notes: string;
   isExpanded: boolean;
 }
@@ -57,7 +60,20 @@ interface WorkoutFormProps {
   initialWorkout?: Workout;
   submitLabel?: string;
   onCancel?: () => void;
+  /** Eerdere workouts: daaruit komt de "vorige keer" per oefening (alleen bij een nieuwe workout). */
+  history?: Workout[];
 }
+
+/** `done: false` = voorgesteld (vorige keer) maar nog niet afgevinkt; zulke sets worden niet opgeslagen. */
+type FormSet = { weight: string; reps: string; done?: false | true };
+
+const setsFromLast = (last: LastPerformance): FormSet[] =>
+  last.sets.map((s) => ({ weight: String(s.weight), reps: String(s.reps), done: false as const }));
+
+const sameSets = (a: FormSet[], b: FormSet[]) =>
+  a.length === b.length && a.every((s, i) => s.weight === b[i].weight && s.reps === b[i].reps);
+
+const nlNumber = (n: number) => n.toLocaleString("nl-BE", { maximumFractionDigits: 1 });
 
 const createEmptyExercise = (): ExerciseFormData => ({
   exercise: "",
@@ -80,8 +96,10 @@ export function WorkoutForm({
   initialWorkout,
   submitLabel,
   onCancel,
+  history = [],
 }: WorkoutFormProps) {
   const isEditing = !!initialWorkout;
+  const lastFor = (name: string): LastPerformance | null => (isEditing ? null : findLastPerformance(history, name));
   const draftKey = draftKeyFor(useOptionalAuth()?.user?.uid);
   // Het concept van een lopende nieuwe workout wordt één keer gelezen bij het openen van het formulier, vóór de
   // eerste render. Zo kan de autosave hieronder het bewaarde concept nooit met een leeg formulier overschrijven.
@@ -100,6 +118,7 @@ export function WorkoutForm({
     initialWorkout ? initialWorkout.trainingType : (restoredDraft?.trainingType ?? "Custom")
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
 
   // Bewaar het lopende formulier bij elke wijziging. Een leeg formulier (na opslaan of weggooien) wist het concept.
   useEffect(() => {
@@ -124,17 +143,39 @@ export function WorkoutForm({
   const loadTemplate = (template: WorkoutTemplate) => {
     setTrainingType(template.category);
     const templateExercises: ExerciseFormData[] = template.exercises.map(
-      (ex, index) => ({
+      (ex, index) => {
+        const last = lastFor(ex.exercise);
+        return {
         exercise: ex.exercise,
-        sets: Array.from({ length: ex.suggestedSets }, () => ({
-          weight: "",
-          reps: "",
-        })),
+        // Met geschiedenis: begin bij wat je vorige keer deed. Anders lege sets volgens het template.
+        sets: last
+          ? setsFromLast(last)
+          : Array.from({ length: ex.suggestedSets }, () => ({
+              weight: "",
+              reps: "",
+            })),
         notes: "",
         isExpanded: index === 0, // Only first exercise expanded
-      })
+        };
+      }
     );
     setExercises(templateExercises);
+  };
+
+  /** Snelstart: dezelfde oefeningen als de laatste workout van dit type, met de sets van de vorige keer als voorstel. */
+  const startFromLast = (workout: Workout) => {
+    setTrainingType(workout.trainingType);
+    setExercises(
+      workout.exercises.map((ex, index) => {
+        const last = lastFor(ex.exercise);
+        return {
+          exercise: ex.exercise,
+          sets: last ? setsFromLast(last) : [{ weight: "", reps: "" }],
+          notes: "",
+          isExpanded: index === 0,
+        };
+      })
+    );
   };
 
   const removeExercise = (index: number) => {
@@ -161,6 +202,25 @@ export function WorkoutForm({
     setExercises(updated);
   };
 
+  /**
+   * Kiest een oefening. Zijn de sets nog leeg (of nog precies de overgenomen waarden van de vorige oefening),
+   * dan worden ze gevuld met wat je vorige keer deed. Wat je zelf hebt ingevuld wordt nooit overschreven.
+   */
+  const selectExercise = (index: number, value: string) => {
+    const current = exercises[index];
+    const lastOld = lastFor(current.exercise);
+    const lastNew = lastFor(value);
+    const untouched = !current.sets.some(isFilled);
+    const isOldPrefill =
+      !!lastOld && current.sets.every((st) => st.done === false) && sameSets(current.sets, setsFromLast(lastOld));
+    let sets = current.sets;
+    if (lastNew && (untouched || isOldPrefill)) sets = setsFromLast(lastNew);
+    else if (isOldPrefill) sets = [{ weight: "", reps: "" }];
+    const updated = [...exercises];
+    updated[index] = { ...current, exercise: value, sets };
+    setExercises(updated);
+  };
+
   const addSet = (exerciseIndex: number) => {
     const updated = [...exercises];
     const lastSet = updated[exerciseIndex].sets.at(-1);
@@ -181,6 +241,16 @@ export function WorkoutForm({
     }
   };
 
+  const toggleSetDone = (exerciseIndex: number, setIndex: number) => {
+    const updated = [...exercises];
+    const target = updated[exerciseIndex].sets[setIndex];
+    const nowDone = target.done === false;
+    target.done = nowDone ? true : false;
+    setExercises(updated);
+    // Een set afvinken start de rust. Alleen in een nieuwe workout, niet bij bewerken.
+    if (nowDone && !isEditing) setRestEndsAt(Date.now() + DEFAULT_REST_SECONDS * 1000);
+  };
+
   const updateSet = (
     exerciseIndex: number,
     setIndex: number,
@@ -188,8 +258,54 @@ export function WorkoutForm({
     value: string
   ) => {
     const updated = [...exercises];
-    updated[exerciseIndex].sets[setIndex][field] = value;
+    const target = updated[exerciseIndex].sets[setIndex];
+    target[field] = value;
+    target.done = true; // zelf iets invullen of aanpassen telt als "gedaan"
     setExercises(updated);
+  };
+
+  const renderLastPerformance = (exIndex: number, exercise: ExerciseFormData) => {
+    const last = lastFor(exercise.exercise);
+    if (!last) return null;
+    const day = describeWorkoutMoment(last.startedAt, last.timeZone)?.split(" · ")[0];
+    // Alleen afgevinkte of zelf ingevulde sets tellen mee; voorgestelde sets zijn nog niet gedaan.
+    const now = exercise.sets.filter((st) => st.done !== false).filter(isValidSet).reduce((sum, st) => sum + Number(st.weight) * Number(st.reps), 0);
+    const diff = now - last.volume;
+    const lastSets = setsFromLast(last);
+    return (
+      <div className="rounded-lg bg-primary/10 border border-primary/20 p-3 text-xs space-y-1" data-testid="last-performance">
+        <p className="font-medium text-foreground">Vorige keer{day ? ` · ${day}` : ""}</p>
+        <p className="text-muted-foreground">
+          {last.sets.map((st) => `${nlNumber(st.weight)} kg × ${st.reps}`).join(" · ")}
+        </p>
+        <p className="text-muted-foreground">Volume: {nlNumber(last.volume)} kg</p>
+        {now > 0 && (
+          <p className={diff >= 0 ? "text-primary font-medium" : "text-muted-foreground"}>
+            Nu: {nlNumber(now)} kg ·{" "}
+            {diff > 0
+              ? `+${nlNumber(diff)} kg boven vorige keer`
+              : diff === 0
+                ? "gelijk aan vorige keer"
+                : `nog ${nlNumber(-diff)} kg te gaan om gelijk te komen`}
+          </p>
+        )}
+        {!sameSets(exercise.sets, lastSets) && (
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            className="h-auto p-0 text-xs"
+            onClick={() => {
+              const updated = [...exercises];
+              updated[exIndex] = { ...exercise, sets: lastSets };
+              setExercises(updated);
+            }}
+          >
+            Vorige keer overnemen
+          </Button>
+        )}
+      </div>
+    );
   };
 
   const isFilled = (s: { weight: string; reps: string }) =>
@@ -225,7 +341,7 @@ export function WorkoutForm({
     const validExercises: ExerciseLog[] = exercises
       .filter((ex) => ex.exercise.trim())
       .map((ex) => {
-        const validSets = ex.sets.filter(isValidSet).map((s, index) => ({
+        const validSets = ex.sets.filter((s) => s.done !== false).filter(isValidSet).map((s, index) => ({
           setNumber: index + 1,
           weight: Number(s.weight),
           reps: Number(s.reps),
@@ -241,7 +357,12 @@ export function WorkoutForm({
       })
       .filter((ex) => ex.sets.length > 0);
 
-    if (validExercises.length === 0) return;
+    if (validExercises.length === 0) {
+      if (exercises.some((ex) => ex.exercise.trim() && ex.sets.some((s) => s.done === false && isValidSet(s)))) {
+        toast.error("Vink de sets af die je gedaan hebt, of pas ze aan, om op te slaan.");
+      }
+      return;
+    }
 
     setIsSubmitting(true);
     let saved: void | boolean = false;
@@ -256,9 +377,14 @@ export function WorkoutForm({
       setExercises([createEmptyExercise()]);
       setTrainingType("Custom");
       setDraftNoticeFrom(null);
+      setRestEndsAt(null);
       clearDraft(getBrowserStorage(), draftKey);
     }
   };
+
+  // De snelstart verschijnt alleen bij een leeg formulier, zodat hij nooit iets overschrijft wat je al hebt ingevuld.
+  const formIsEmpty = exercises.every((ex) => !ex.exercise.trim() && !ex.notes.trim() && !ex.sets.some(isFilled));
+  const quickStartTarget = !isEditing && formIsEmpty ? findLastWorkout(history, trainingType) : null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -304,6 +430,25 @@ export function WorkoutForm({
       </AlertDialog>
 
       {/* Template Selector */}
+      {quickStartTarget && (
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-auto py-3 flex-col gap-0.5 border-primary/40 bg-primary/10 hover:bg-primary/20"
+          onClick={() => startFromLast(quickStartTarget)}
+        >
+          <span className="font-semibold">
+            {trainingType === "Custom" || trainingType === "Onbekend"
+              ? "Zelfde als laatste workout"
+              : `Zelfde als vorige ${trainingType}`}
+          </span>
+          <span className="text-xs font-normal text-muted-foreground">
+            {quickStartTarget.trainingType !== "Onbekend" ? `${quickStartTarget.trainingType} · ` : ""}
+            {describeWorkoutMoment(quickStartTarget.startedAt, quickStartTarget.timeZone)?.split(" · ")[0]} ·{" "}
+            {quickStartTarget.exercises.length} oefening{quickStartTarget.exercises.length === 1 ? "" : "en"}
+          </span>
+        </Button>
+      )}
       {!isEditing && <WorkoutTemplateSelector onSelectTemplate={loadTemplate} />}
 
       {/* Training type */}
@@ -378,9 +523,10 @@ export function WorkoutForm({
               <div className="space-y-2">
                 <ExerciseSelector
                   value={exercise.exercise}
-                  onChange={(value) => updateExercise(exIndex, "exercise", value)}
+                  onChange={(value) => selectExercise(exIndex, value)}
                   placeholder="Selecteer oefening"
                 />
+                {renderLastPerformance(exIndex, exercise)}
               </div>
 
               {/* Sets */}
@@ -388,10 +534,26 @@ export function WorkoutForm({
                 <Label className="text-sm text-muted-foreground">Sets</Label>
                 {exercise.sets.map((set, setIndex) => (
                   <div key={setIndex} className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground">
-                      {setIndex + 1}
-                    </div>
-                    <div className="flex-1 grid grid-cols-2 gap-2">
+                    {(() => {
+                      const checked = isValidSet(set) && set.done !== false;
+                      return (
+                        <button
+                          type="button"
+                          role="checkbox"
+                          aria-checked={checked}
+                          aria-label={`Set ${setIndex + 1} ${checked ? "afgevinkt" : "afvinken"}`}
+                          disabled={!isValidSet(set)}
+                          onClick={() => toggleSetDone(exIndex, setIndex)}
+                          className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-xs font-medium transition-colors disabled:opacity-60 ${
+                            checked ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/20"
+                          }`}
+                        >
+                          {checked ? <Check className="w-4 h-4" /> : setIndex + 1}
+                        </button>
+                      );
+                    })()}
+                    <div className="flex-1">
+                    <div className="grid grid-cols-2 gap-2">
                       <div className="relative">
                         <Input
                           type="number"
@@ -426,6 +588,15 @@ export function WorkoutForm({
                           reps
                         </span>
                       </div>
+                    </div>
+                    {(() => {
+                      const prev = lastFor(exercise.exercise)?.sets[setIndex];
+                      return prev ? (
+                        <p className="mt-0.5 text-[11px] text-muted-foreground" data-testid="previous-set">
+                          Vorige: {nlNumber(prev.weight)} kg × {prev.reps}
+                        </p>
+                      ) : null;
+                    })()}
                     </div>
                     {exercise.sets.length > 1 && (
                       <button
@@ -489,6 +660,9 @@ export function WorkoutForm({
         <Button type="button" variant="ghost" onClick={onCancel} className="w-full">
           Annuleren
         </Button>
+      )}
+      {restEndsAt !== null && !isEditing && (
+        <RestTimer endsAt={restEndsAt} onChange={setRestEndsAt} onClose={() => setRestEndsAt(null)} />
       )}
     </form>
   );
