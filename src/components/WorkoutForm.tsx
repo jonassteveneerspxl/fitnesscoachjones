@@ -268,7 +268,8 @@ export function WorkoutForm({
     const last = lastFor(exercise.exercise);
     if (!last) return null;
     const day = describeWorkoutMoment(last.startedAt, last.timeZone)?.split(" · ")[0];
-    const now = exercise.sets.filter(isValidSet).reduce((sum, st) => sum + Number(st.weight) * Number(st.reps), 0);
+    // Alleen afgevinkte of zelf ingevulde sets tellen mee; voorgestelde sets zijn nog niet gedaan.
+    const now = exercise.sets.filter((st) => st.done !== false).filter(isValidSet).reduce((sum, st) => sum + Number(st.weight) * Number(st.reps), 0);
     const diff = now - last.volume;
     const lastSets = setsFromLast(last);
     return (

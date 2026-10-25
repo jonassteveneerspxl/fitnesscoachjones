@@ -58,12 +58,17 @@ describe("vorige keer in het formulier", () => {
     const hint = screen.getByTestId("last-performance").textContent ?? "";
     expect(hint).toContain("40 kg × 10");
     expect(hint).toContain("1.080 kg");
-    expect(hint).toContain("gelijk aan vorige keer");
+    // Voorgestelde sets zijn nog niet gedaan: pas na afvinken tellen ze mee.
+    expect(hint).not.toContain("Nu:");
+    [1, 2, 3].forEach((n) => fireEvent.click(screen.getByRole("checkbox", { name: new RegExp(`set ${n} afvinken`, "i") })));
+    expect(screen.getByTestId("last-performance").textContent).toContain("gelijk aan vorige keer");
   });
 
   it("laat zien hoeveel je boven of onder vorige keer zit terwijl je invult", () => {
     render(<WorkoutForm onSubmit={vi.fn()} history={[newer]} />);
     pick("Skull Crushers");
+    fireEvent.click(screen.getByRole("checkbox", { name: /set 1 afvinken/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /set 2 afvinken/i }));
     fireEvent.change(screen.getAllByPlaceholderText("Reps")[2], { target: { value: "10" } });
     expect(screen.getByTestId("last-performance").textContent).toContain("+80 kg boven vorige keer");
     fireEvent.change(screen.getAllByPlaceholderText("Reps")[2], { target: { value: "5" } });
