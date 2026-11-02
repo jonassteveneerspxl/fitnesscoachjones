@@ -13,6 +13,7 @@ import NotFound from "./pages/NotFound";
 
 // De statistiekenpagina bevat de grafiekbibliotheek en wordt pas geladen als je haar opent.
 const Statistics = lazy(() => import("./pages/Statistics"));
+const CalendarPage = lazy(() => import("./pages/Calendar"));
 
 const queryClient = new QueryClient();
 const authService = createFirebaseAuthService();
@@ -33,6 +34,14 @@ const App = () => (
             element={
               <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">Laden…</p>}>
                 <Statistics />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/kalender"
+            element={
+              <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">Laden…</p>}>
+                <CalendarPage />
               </Suspense>
             }
           />
