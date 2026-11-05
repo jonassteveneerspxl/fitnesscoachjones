@@ -1,4 +1,4 @@
-import { BarChart3, Dumbbell } from "lucide-react";
+import { BarChart3, CalendarDays, Dumbbell } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "@/components/UserMenu";
@@ -35,6 +35,10 @@ export function AppHeader({ containerClassName = "max-w-2xl" }: AppHeaderProps) 
           <NavLink to="/" end className={tabClass} activeClassName={activeClass}>
             <Dumbbell className="w-5 h-5" />
             Training
+          </NavLink>
+          <NavLink to="/kalender" className={tabClass} activeClassName={activeClass}>
+            <CalendarDays className="w-5 h-5" />
+            Kalender
           </NavLink>
           <NavLink to="/statistieken" className={tabClass} activeClassName={activeClass}>
             <BarChart3 className="w-5 h-5" />
