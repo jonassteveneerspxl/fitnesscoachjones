@@ -235,6 +235,94 @@ export const exercises: Exercise[] = [
   { name: "Hollow Body Hold", muscleGroup: "core", pplCategory: "push", equipment: "Bodyweight" },
   { name: "L-Sit", muscleGroup: "core", pplCategory: "push", equipment: "Bodyweight" },
   { name: "Dragon Flag", muscleGroup: "core", pplCategory: "push", equipment: "Bodyweight" },
+
+  // === ADDITIONAL BASIC-FIT MACHINES & COMMON VARIATIONS ===
+  // Chest (Push)
+  { name: "Incline Chest Press Machine", muscleGroup: "chest", pplCategory: "push", equipment: "Machine" },
+  { name: "Decline Chest Press Machine", muscleGroup: "chest", pplCategory: "push", equipment: "Machine" },
+  { name: "Smith Machine Bench Press", muscleGroup: "chest", pplCategory: "push", equipment: "Smith Machine" },
+  { name: "Smith Machine Incline Bench Press", muscleGroup: "chest", pplCategory: "push", equipment: "Smith Machine" },
+  { name: "Smith Machine Decline Bench Press", muscleGroup: "chest", pplCategory: "push", equipment: "Smith Machine" },
+  { name: "Machine Chest Fly", muscleGroup: "chest", pplCategory: "push", equipment: "Machine" },
+  { name: "Assisted Chest Dips", muscleGroup: "chest", pplCategory: "push", equipment: "Assisted Machine" },
+  { name: "Single Arm Chest Press Machine", muscleGroup: "chest", pplCategory: "push", equipment: "Machine" },
+  { name: "Spine Press", muscleGroup: "chest", pplCategory: "push", equipment: "Machine" },
+
+  // Shoulders (Push / Pull)
+  { name: "Smith Machine Shoulder Press", muscleGroup: "shoulders", pplCategory: "push", equipment: "Smith Machine" },
+  { name: "Seated Machine Shoulder Press", muscleGroup: "shoulders", pplCategory: "push", equipment: "Machine" },
+  { name: "Lateral Raise Machine", muscleGroup: "shoulders", pplCategory: "push", equipment: "Machine" },
+  { name: "Single Arm Cable Lateral Raise", muscleGroup: "shoulders", pplCategory: "push", equipment: "Cable" },
+  { name: "Cable Rear Delt Fly", muscleGroup: "shoulders", pplCategory: "pull", equipment: "Cable" },
+  { name: "Bent Over Rear Delt Raise", muscleGroup: "shoulders", pplCategory: "pull", equipment: "Dumbbells" },
+
+  // Triceps (Push)
+  { name: "Assisted Dips", muscleGroup: "triceps", pplCategory: "push", equipment: "Assisted Machine" },
+  { name: "Machine Tricep Extension", muscleGroup: "triceps", pplCategory: "push", equipment: "Machine" },
+  { name: "Cable Overhead Tricep Extension", muscleGroup: "triceps", pplCategory: "push", equipment: "Cable" },
+  { name: "Reverse Grip Tricep Pushdown", muscleGroup: "triceps", pplCategory: "push", equipment: "Cable" },
+  { name: "Single Arm Overhead Tricep Extension", muscleGroup: "triceps", pplCategory: "push", equipment: "Cable" },
+
+  // Back (Pull)
+  { name: "Assisted Pull-Ups", muscleGroup: "back", pplCategory: "pull", equipment: "Assisted Machine" },
+  { name: "Neutral Grip Lat Pulldown", muscleGroup: "back", pplCategory: "pull", equipment: "Cable" },
+  { name: "Reverse Grip Lat Pulldown", muscleGroup: "back", pplCategory: "pull", equipment: "Cable" },
+  { name: "Single Arm Lat Pulldown", muscleGroup: "back", pplCategory: "pull", equipment: "Cable" },
+  { name: "Iso-Lateral Row", muscleGroup: "back", pplCategory: "pull", equipment: "Machine" },
+  { name: "Low Row Machine", muscleGroup: "back", pplCategory: "pull", equipment: "Machine" },
+  { name: "Chest Supported Machine Row", muscleGroup: "back", pplCategory: "pull", equipment: "Machine" },
+  { name: "High Row Machine", muscleGroup: "back", pplCategory: "pull", equipment: "Machine" },
+  { name: "Single Arm Cable Row", muscleGroup: "back", pplCategory: "pull", equipment: "Cable" },
+  { name: "Smith Machine Bent Over Row", muscleGroup: "back", pplCategory: "pull", equipment: "Smith Machine" },
+  { name: "Machine Back Extension", muscleGroup: "back", pplCategory: "pull", equipment: "Machine" },
+
+  // Biceps (Pull)
+  { name: "Preacher Curl Machine", muscleGroup: "biceps", pplCategory: "pull", equipment: "Machine" },
+  { name: "Single Arm Cable Curl", muscleGroup: "biceps", pplCategory: "pull", equipment: "Cable" },
+  { name: "Bayesian Cable Curl", muscleGroup: "biceps", pplCategory: "pull", equipment: "Cable" },
+  { name: "Reverse EZ Bar Curl", muscleGroup: "biceps", pplCategory: "pull", equipment: "EZ Bar" },
+  { name: "Machine Hammer Curl", muscleGroup: "biceps", pplCategory: "pull", equipment: "Machine" },
+
+  // Quadriceps (Legs)
+  { name: "Horizontal Leg Press", muscleGroup: "quadriceps", pplCategory: "legs", equipment: "Machine" },
+  { name: "45 Degree Leg Press", muscleGroup: "quadriceps", pplCategory: "legs", equipment: "Machine" },
+  { name: "Single Leg Leg Press", muscleGroup: "quadriceps", pplCategory: "legs", equipment: "Machine" },
+  { name: "Smith Machine Bulgarian Split Squat", muscleGroup: "quadriceps", pplCategory: "legs", equipment: "Smith Machine" },
+  { name: "Smith Machine Lunges", muscleGroup: "quadriceps", pplCategory: "legs", equipment: "Smith Machine" },
+  { name: "Smith Machine Front Squat", muscleGroup: "quadriceps", pplCategory: "legs", equipment: "Smith Machine" },
+  { name: "Reverse Hack Squat", muscleGroup: "quadriceps", pplCategory: "legs", equipment: "Machine" },
+  { name: "Single Leg Leg Extension", muscleGroup: "quadriceps", pplCategory: "legs", equipment: "Machine" },
+
+  // Hamstrings (Legs)
+  { name: "Standing Leg Curl", muscleGroup: "hamstrings", pplCategory: "legs", equipment: "Machine" },
+  { name: "Single Leg Seated Leg Curl", muscleGroup: "hamstrings", pplCategory: "legs", equipment: "Machine" },
+  { name: "Single Leg Lying Leg Curl", muscleGroup: "hamstrings", pplCategory: "legs", equipment: "Machine" },
+  { name: "Smith Machine Romanian Deadlift", muscleGroup: "hamstrings", pplCategory: "legs", equipment: "Smith Machine" },
+
+  // Glutes (Legs)
+  { name: "Glute Drive Machine", muscleGroup: "glutes", pplCategory: "legs", equipment: "Machine" },
+  { name: "Smith Machine Hip Thrust", muscleGroup: "glutes", pplCategory: "legs", equipment: "Smith Machine" },
+  { name: "Cable Hip Abduction", muscleGroup: "glutes", pplCategory: "legs", equipment: "Cable" },
+  { name: "Cable Hip Adduction", muscleGroup: "glutes", pplCategory: "legs", equipment: "Cable" },
+  { name: "Smith Machine Glute Bridge", muscleGroup: "glutes", pplCategory: "legs", equipment: "Smith Machine" },
+  { name: "Hip Adduction Machine", muscleGroup: "glutes", pplCategory: "legs", equipment: "Machine" },
+
+  // Calves (Legs)
+  { name: "Calf Raise on Hack Squat", muscleGroup: "calves", pplCategory: "legs", equipment: "Machine" },
+  { name: "Calf Raise on Smith Machine", muscleGroup: "calves", pplCategory: "legs", equipment: "Smith Machine" },
+
+  // Core
+  { name: "Ab Crunch Machine", muscleGroup: "core", pplCategory: "push", equipment: "Machine" },
+  { name: "Rotary Torso Machine", muscleGroup: "core", pplCategory: "push", equipment: "Machine" },
+  { name: "Captain's Chair Knee Raises", muscleGroup: "core", pplCategory: "pull", equipment: "Machine" },
+  { name: "Captain's Chair Leg Raises", muscleGroup: "core", pplCategory: "pull", equipment: "Machine" },
+  { name: "Decline Bench Crunch", muscleGroup: "core", pplCategory: "push", equipment: "Bench" },
+  { name: "Weighted Crunches", muscleGroup: "core", pplCategory: "push", equipment: "Plate" },
+  { name: "Weighted Plank", muscleGroup: "core", pplCategory: "push", equipment: "Plate" },
+  { name: "Cable Side Bend", muscleGroup: "core", pplCategory: "push", equipment: "Cable" },
+  { name: "Reverse Crunch", muscleGroup: "core", pplCategory: "push", equipment: "Bodyweight" },
+  { name: "Machine Torso Rotation", muscleGroup: "core", pplCategory: "push", equipment: "Machine" },
+
 ];
 
 // Helper functions
