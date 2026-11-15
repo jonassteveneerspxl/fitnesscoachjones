@@ -589,3 +589,72 @@ export function summarize(sessions: Session[]): StatsSummary {
 }
 
 export { PR_TYPES };
+
+// ---------------------------------------------------------------------------------------------------------
+// Overzicht: deze week tegenover vorige week, en trend per oefening
+// ---------------------------------------------------------------------------------------------------------
+
+export interface WeekTotals {
+  sessions: number;
+  volume: number;
+  sets: number;
+}
+
+export interface WeekComparisonResult {
+  thisWeek: WeekTotals;
+  lastWeek: WeekTotals;
+}
+
+function weekTotals(sessions: Session[], weekKey: string): WeekTotals {
+  const inWeek = sessions.filter((s) => s.weekKey === weekKey);
+  return {
+    sessions: inWeek.length,
+    volume: round1(inWeek.reduce((sum, s) => sum + (s.volume ?? 0), 0)),
+    sets: inWeek.reduce((sum, s) => sum + s.exercises.reduce((n, e) => n + e.stats.setCount, 0), 0),
+  };
+}
+
+/** Totalen van de huidige ISO-week en de week ervoor. Opwarmsets tellen niet mee. */
+export function compareWeeks(sessions: Session[], todayKey: string): WeekComparisonResult {
+  const thisKey = toIsoWeekKey(todayKey);
+  const lastKey = toIsoWeekKey(addDaysToDateKey(todayKey, -7));
+  return { thisWeek: weekTotals(sessions, thisKey), lastWeek: weekTotals(sessions, lastKey) };
+}
+
+export type TrendDirection = "up" | "down" | "same";
+
+export interface ExerciseTrend {
+  exerciseKey: string;
+  exerciseName: string;
+  /** Aantal sessies met setgegevens in de periode. */
+  sessions: number;
+  /** Geschat 1RM van de eerste en de laatste sessie in de periode. */
+  firstE1RM: number;
+  lastE1RM: number;
+  /** Verandering in procent (afgerond op 1 decimaal). */
+  percent: number;
+  direction: TrendDirection;
+}
+
+/**
+ * Trend van het geschatte 1RM per oefening over de laatste `weeks` weken: eerste tegenover laatste sessie in die periode.
+ * Oefeningen met minder dan 2 sessies in de periode krijgen geen trend (te weinig om iets te zeggen).
+ * Binnen 1% telt als "gelijk". Gesorteerd op aantal sessies, dan op naam.
+ */
+export function exerciseTrends(sessions: Session[], todayKey: string, weeks = 4): ExerciseTrend[] {
+  const from = addDaysToDateKey(todayKey, -7 * weeks + 1);
+  const recent = sessions.filter((s) => s.dateKey >= from && s.dateKey <= todayKey);
+  const names = new Map<string, string>();
+  for (const s of recent) for (const e of s.exercises) if (e.hasSets) names.set(e.exerciseKey, e.exerciseName);
+  const out: ExerciseTrend[] = [];
+  for (const [key, name] of names) {
+    const points = exerciseProgression(recent, key).filter((p) => p.best1RM > 0);
+    if (points.length < 2) continue;
+    const first = points[0].best1RM;
+    const last = points[points.length - 1].best1RM;
+    const percent = round1(((last - first) / first) * 100);
+    const direction: TrendDirection = percent >= 1 ? "up" : percent <= -1 ? "down" : "same";
+    out.push({ exerciseKey: key, exerciseName: name, sessions: points.length, firstE1RM: first, lastE1RM: last, percent, direction });
+  }
+  return out.sort((a, b) => b.sessions - a.sessions || a.exerciseName.localeCompare(b.exerciseName));
+}

@@ -153,7 +153,7 @@ describe("filters", () => {
   it("oefeningfilter: volume telt alleen die oefening en de progressie verschijnt", async () => {
     renderPage();
     await ready();
-    expect(screen.getByText(/kies een oefening om de progressie te zien/i)).toBeInTheDocument();
+    expect(screen.getByText(/zoek een oefening om de progressie te zien/i)).toBeInTheDocument();
     fireEvent.change(select("Oefening"), { target: { value: "squat" } });
     expect(kpi("Trainingen")).toHaveTextContent("2"); // B en C
     expect(kpi("Totaal volume")).toHaveTextContent("1.500 kg");
@@ -197,7 +197,7 @@ describe("filters", () => {
     fireEvent.change(select("Oefening"), { target: { value: "bench press" } });
     fireEvent.click(screen.getByRole("button", { name: /herstel/i }));
     expect(kpi("Trainingen")).toHaveTextContent("5");
-    expect(screen.getByText(/kies een oefening om de progressie te zien/i)).toBeInTheDocument();
+    expect(screen.getByText(/zoek een oefening om de progressie te zien/i)).toBeInTheDocument();
   });
 });
 
