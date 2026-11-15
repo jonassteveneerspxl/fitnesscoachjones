@@ -20,7 +20,7 @@ export function calculateVolumeFromSets(sets: SetLike[]): number {
 }
 
 export function getBest1RMFromSets(sets: SetLike[]): number {
-  const work = workSets(sets);
+  const work = workSets(sets).filter((s) => s.reps >= 1); // tijdsets (reps 0) hebben geen 1RM
   if (work.length === 0) return 0;
   return Math.max(...work.map((set) => calculate1RM(set.weight, set.reps)));
 }

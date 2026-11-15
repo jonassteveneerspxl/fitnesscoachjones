@@ -1,4 +1,8 @@
 import {
+  CARDIO_ACTIVITIES,
+  CardioActivity,
+  CardioData,
+  ExerciseKind,
   ExerciseLog,
   SetData,
   TRAINING_TYPES,
@@ -35,7 +39,25 @@ export function withDerivedTotals(workout: Workout): Workout {
   };
 }
 
-function normalizeSets(raw: unknown, label: string, issues: string[]): SetData[] {
+function nextSetNumber(s: Record<string, unknown>, index: number, used: Set<number>): number {
+  let setNumber = index + 1;
+  if (isFiniteNumber(s.setNumber) && Number.isInteger(s.setNumber) && s.setNumber >= 1 && !used.has(s.setNumber)) {
+    setNumber = s.setNumber;
+  } else {
+    while (used.has(setNumber)) setNumber++;
+  }
+  used.add(setNumber);
+  return setNumber;
+}
+
+function normalizeCardio(raw: unknown): CardioData | null {
+  if (!isRecord(raw) || !isFiniteNumber(raw.durationSeconds) || raw.durationSeconds < 1) return null;
+  const distance = isFiniteNumber(raw.distanceKm) && raw.distanceKm >= 0 ? raw.distanceKm : 0;
+  const activity = (CARDIO_ACTIVITIES as readonly unknown[]).includes(raw.activity) ? (raw.activity as CardioActivity) : "Andere";
+  return { activity, distanceKm: distance, durationSeconds: Math.round(raw.durationSeconds) };
+}
+
+function normalizeSets(raw: unknown, label: string, issues: string[], kind: ExerciseKind = "strength"): SetData[] {
   if (!Array.isArray(raw)) {
     issues.push(`${label}: sets ontbreken of zijn ongeldig`);
     return [];
@@ -43,17 +65,19 @@ function normalizeSets(raw: unknown, label: string, issues: string[]): SetData[]
   const sets: SetData[] = [];
   const used = new Set<number>();
   raw.forEach((s, index) => {
+    if (kind === "time") {
+      if (!isRecord(s) || !isFiniteNumber(s.weight) || s.weight < 0 || !isFiniteNumber(s.durationSeconds) || s.durationSeconds < 1) {
+        issues.push(`${label}: set ${index + 1} is ongeldig en is overgeslagen`);
+        return;
+      }
+      sets.push({ setNumber: nextSetNumber(s, index, used), weight: s.weight, reps: 0, durationSeconds: Math.round(s.durationSeconds) });
+      return;
+    }
     if (!isRecord(s) || !isFiniteNumber(s.weight) || s.weight < 0 || !isFiniteNumber(s.reps) || !Number.isInteger(s.reps) || s.reps < 1) {
       issues.push(`${label}: set ${index + 1} is ongeldig en is overgeslagen`);
       return;
     }
-    let setNumber = index + 1;
-    if (isFiniteNumber(s.setNumber) && Number.isInteger(s.setNumber) && s.setNumber >= 1 && !used.has(s.setNumber)) {
-      setNumber = s.setNumber;
-    } else {
-      while (used.has(setNumber)) setNumber++;
-    }
-    used.add(setNumber);
+    const setNumber = nextSetNumber(s, index, used);
     sets.push(s.isWarmup === true ? { setNumber, weight: s.weight, reps: s.reps, isWarmup: true } : { setNumber, weight: s.weight, reps: s.reps });
   });
   return sets;
@@ -68,9 +92,20 @@ function normalizeExercises(raw: unknown, issues: string[]): ExerciseLog[] | nul
       return;
     }
     const name = ex.exercise.trim();
-    const sets = normalizeSets(ex.sets, name, issues);
+    const kind: ExerciseKind = ex.kind === "time" || ex.kind === "cardio" ? ex.kind : "strength";
+    if (kind === "cardio") {
+      const cardio = normalizeCardio(ex.cardio);
+      if (!cardio) {
+        issues.push(`${name}: cardiogegevens zijn ongeldig en de oefening is overgeslagen`);
+        return;
+      }
+      exercises.push({ exercise: name, kind, cardio, sets: [], notes: typeof ex.notes === "string" && ex.notes !== "" ? ex.notes : undefined, volume: 0, estimated1RM: 0 });
+      return;
+    }
+    const sets = normalizeSets(ex.sets, name, issues, kind);
     exercises.push({
       exercise: name,
+      ...(kind === "time" ? { kind } : {}),
       sets,
       notes: typeof ex.notes === "string" && ex.notes !== "" ? ex.notes : undefined,
       volume: 0,

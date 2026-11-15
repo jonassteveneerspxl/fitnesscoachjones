@@ -5,6 +5,7 @@ export const TRAINING_TYPES = [
   "Upper",
   "Lower",
   "Full Body",
+  "Cardio",
   "Custom",
   "Onbekend",
 ] as const;
@@ -22,6 +23,23 @@ export interface SetLike {
   reps: number;
   /** Oud veld uit eerdere versies van de app. Wordt bewaard maar genegeerd: elke set telt mee. */
   isWarmup?: boolean;
+  /** Tijdoefening (plank, deadhang): duur van de set in seconden. Dan is `reps` 0 en `weight` het extra gewicht (0 = geen). */
+  durationSeconds?: number;
+}
+
+/** Soort oefening. Afwezig in opgeslagen data = "strength" (gewicht en herhalingen), zoals vóór deze update. */
+export const EXERCISE_KINDS = ["strength", "time", "cardio"] as const;
+export type ExerciseKind = (typeof EXERCISE_KINDS)[number];
+
+export const CARDIO_ACTIVITIES = ["Lopen", "Fietsen", "Roeien", "Zwemmen", "Wandelen", "Andere"] as const;
+export type CardioActivity = (typeof CARDIO_ACTIVITIES)[number];
+
+/** Een cardio-onderdeel: afstand en tijd. Tempo en snelheid worden berekend, niet opgeslagen. */
+export interface CardioData {
+  activity: CardioActivity;
+  /** Kilometer; 0 = niet ingevuld. */
+  distanceKm: number;
+  durationSeconds: number;
 }
 
 export interface SetData extends SetLike {
@@ -31,6 +49,10 @@ export interface SetData extends SetLike {
 
 export interface ExerciseLog {
   exercise: string;
+  /** Afwezig = "strength". */
+  kind?: ExerciseKind;
+  /** Alleen bij kind "cardio"; dan is `sets` leeg. */
+  cardio?: CardioData;
   sets: SetData[];
   notes?: string;
   /** Afgeleid: som van gewicht × reps. Wordt bij laden altijd herberekend uit de sets. */
