@@ -1,10 +1,13 @@
 import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
-import type { ExerciseTrend, WeekComparisonResult } from "@/utils/statistics";
+import { InfoTip } from "@/components/InfoTip";
+import type { ExerciseTrend, RecentRecord, WeekComparisonResult } from "@/utils/statistics";
+import { formatShortDate } from "@/utils/dates";
 import { formatKg } from "@/utils/format";
 
 interface Props {
   weeks: WeekComparisonResult;
   trends: ExerciseTrend[];
+  records: RecentRecord[];
   onSelectExercise: (exerciseKey: string) => void;
 }
 
@@ -23,7 +26,7 @@ function Diff({ now, before, unit = "" }: { now: number; before: number; unit?: 
 const trendText = (t: ExerciseTrend) =>
   t.direction === "same" ? "gelijk" : `${t.percent > 0 ? "+" : "−"}${Math.abs(t.percent).toLocaleString("nl-BE")}%`;
 
-export function OverviewSection({ weeks, trends, onSelectExercise }: Props) {
+export function OverviewSection({ weeks, trends, records, onSelectExercise }: Props) {
   const { thisWeek, lastWeek } = weeks;
   return (
     <section className="space-y-3" aria-label="Overzicht">
@@ -38,7 +41,15 @@ export function OverviewSection({ weeks, trends, onSelectExercise }: Props) {
           { label: "Volume", now: thisWeek.volume, before: lastWeek.volume, text: formatKg(thisWeek.volume), unit: " kg" },
         ].map((k) => (
           <div key={k.label} className="p-3 rounded-xl gradient-card border border-border">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">{k.label}</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              {k.label}
+              {k.label === "Volume" && (
+                <InfoTip term="Volume">
+                  Gewicht × herhalingen, opgeteld over al je sets. Het is een maat voor hoeveel werk je gedaan hebt.
+                  Opwarmsets tellen niet mee.
+                </InfoTip>
+              )}
+            </p>
             <p className="text-xl font-bold text-foreground mt-1">{k.text}</p>
             <Diff now={k.now} before={k.before} unit={k.unit} />
           </div>
@@ -47,7 +58,13 @@ export function OverviewSection({ weeks, trends, onSelectExercise }: Props) {
 
       <div className="p-4 rounded-2xl gradient-card border border-border space-y-2">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Ga ik vooruit? Laatste 4 weken</h3>
+          <h3 className="text-sm font-semibold text-foreground">
+            Ga ik vooruit? Laatste 4 weken
+            <InfoTip term="Geschat 1RM">
+              1RM is het zwaarste gewicht dat je één keer kunt tillen. We schatten het uit je beste set met een
+              formule (Epley), zodat je sets met verschillende gewichten en herhalingen kunt vergelijken.
+            </InfoTip>
+          </h3>
           <p className="text-xs text-muted-foreground">
             Verandering van je geschatte 1RM (een schatting van je maximale gewicht voor 1 herhaling), eerste tegenover
             laatste training. Alleen oefeningen die je minstens 2 keer deed.
@@ -79,6 +96,38 @@ export function OverviewSection({ weeks, trends, onSelectExercise }: Props) {
                 </li>
               );
             })}
+          </ul>
+        )}
+      </div>
+
+      <div className="p-4 rounded-2xl gradient-card border border-border space-y-2">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">
+            Recente records
+            <InfoTip term="PR (persoonlijk record)">
+              Een PR is je beste prestatie tot nu toe in een oefening. Hier telt een hoger geschat 1RM dan ooit
+              eerder. De allereerste keer dat je een oefening doet is geen PR.
+            </InfoTip>
+          </h3>
+          <p className="text-xs text-muted-foreground">Laatste 30 dagen.</p>
+        </div>
+        {records.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-2">Nog geen nieuwe records in de laatste 30 dagen.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {records.slice(0, 6).map((r) => (
+              <li key={r.exerciseKey} className="flex items-center gap-3 py-2">
+                <span className="flex-1 min-w-0">
+                  <span className="block truncate text-sm text-foreground">{r.exerciseName}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {r.weight} kg × {r.reps} · {formatShortDate(r.dateKey)}
+                  </span>
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {Math.round(r.previousE1RM)} → {Math.round(r.e1RM)} kg
+                </span>
+              </li>
+            ))}
           </ul>
         )}
       </div>

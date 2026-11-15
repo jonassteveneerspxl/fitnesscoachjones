@@ -658,3 +658,52 @@ export function exerciseTrends(sessions: Session[], todayKey: string, weeks = 4)
   }
   return out.sort((a, b) => b.sessions - a.sessions || a.exerciseName.localeCompare(b.exerciseName));
 }
+
+// ---------------------------------------------------------------------------------------------------------
+// Recente records
+// ---------------------------------------------------------------------------------------------------------
+
+export interface RecentRecord {
+  exerciseKey: string;
+  exerciseName: string;
+  dateKey: string;
+  workoutId: string;
+  /** De werkset waarmee het record gezet is. */
+  weight: number;
+  reps: number;
+  /** Nieuw geschat 1RM en het vorige beste. */
+  e1RM: number;
+  previousE1RM: number;
+}
+
+/**
+ * Nieuwe records (geschat 1RM) van de laatste `days` dagen, de nieuwste per oefening, nieuwste eerst.
+ * De eerste registratie van een oefening is geen record. Opwarmsets tellen niet (die zitten niet in `sets`).
+ * Er wordt gerekend over de volledige geschiedenis, niet over een gefilterde selectie.
+ */
+export function recentRecords(sessions: Session[], todayKey: string, days = 30): RecentRecord[] {
+  const from = addDaysToDateKey(todayKey, -days + 1);
+  const best = new Map<string, number>();
+  const latest = new Map<string, RecentRecord>();
+  for (const s of sessions) {
+    for (const e of s.exercises) {
+      if (!e.hasSets || !(e.stats.best1RM > 0)) continue;
+      const prev = best.get(e.exerciseKey);
+      const set = bestWorkSet(e.sets);
+      if (prev !== undefined && e.stats.best1RM > prev && set && s.dateKey >= from && s.dateKey <= todayKey) {
+        latest.set(e.exerciseKey, {
+          exerciseKey: e.exerciseKey,
+          exerciseName: e.exerciseName,
+          dateKey: s.dateKey,
+          workoutId: s.workoutId,
+          weight: set.weight,
+          reps: set.reps,
+          e1RM: round1(e.stats.best1RM),
+          previousE1RM: round1(prev),
+        });
+      }
+      if (prev === undefined || e.stats.best1RM > prev) best.set(e.exerciseKey, e.stats.best1RM);
+    }
+  }
+  return [...latest.values()].sort((a, b) => b.dateKey.localeCompare(a.dateKey) || a.exerciseName.localeCompare(b.exerciseName));
+}

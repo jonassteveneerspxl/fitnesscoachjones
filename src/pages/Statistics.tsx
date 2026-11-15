@@ -4,6 +4,7 @@ import { BarChart3, Dumbbell } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { InfoTip } from "@/components/InfoTip";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,6 +34,7 @@ import {
   volumePerPeriod,
   volumePerSession,
   compareWeeks,
+  recentRecords,
   exerciseTrends,
 } from "@/utils/statistics";
 import {
@@ -80,6 +82,7 @@ const Statistics = () => {
   );
   const newestFirst = useMemo(() => [...sessions].reverse(), [sessions]);
   const weeks = useMemo(() => compareWeeks(built.sessions, today), [built.sessions, today]);
+  const recent = useMemo(() => recentRecords(built.sessions, today), [built.sessions, today]);
   const trends = useMemo(() => exerciseTrends(built.sessions, today), [built.sessions, today]);
   const summary = useMemo(() => summarize(sessions), [sessions]);
 
@@ -188,6 +191,7 @@ const Statistics = () => {
         <OverviewSection
           weeks={weeks}
           trends={trends}
+          records={recent}
           onSelectExercise={(key) => setFilters({ ...filters, exerciseKey: key })}
         />
 
@@ -224,11 +228,18 @@ const Statistics = () => {
         <section className="grid grid-cols-3 gap-3" aria-label="Samenvatting">
           {[
             { label: "Trainingen", value: formatNumber(summary.sessions) },
-            { label: "Totaal volume", value: formatKg(summary.totalVolume) },
+            { label: "Totaal volume", value: formatKg(summary.totalVolume), tip: true },
             { label: "Oefeningen", value: formatNumber(summary.exercises) },
           ].map((k) => (
             <div key={k.label} className="p-4 rounded-xl gradient-card border border-border">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{k.label}</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                {k.label}
+                {"tip" in k && (
+                  <InfoTip term="Volume">
+                    Gewicht × herhalingen, opgeteld over al je sets. Opwarmsets tellen niet mee.
+                  </InfoTip>
+                )}
+              </p>
               <p className="text-xl font-bold text-foreground mt-1">{k.value}</p>
             </div>
           ))}

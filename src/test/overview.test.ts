@@ -65,3 +65,38 @@ describe("exerciseTrends", () => {
     expect(byName["Squat"]).toBe("down");
   });
 });
+
+import { recentRecords } from "@/utils/statistics";
+
+describe("recentRecords", () => {
+  it("telt de eerste registratie niet, wel een hoger geschat 1RM in de laatste 30 dagen", () => {
+    const { sessions } = buildSessions([
+      w("2026-10-25T10:00:00.000Z", [bench([100, 5])]),
+      w("2026-11-05T10:00:00.000Z", [bench([100, 5])]),
+      w("2026-11-10T10:00:00.000Z", [bench([105, 5])]),
+    ]);
+    const r = recentRecords(sessions, TODAY);
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({ exerciseName: "Bench Press", weight: 105, reps: 5, dateKey: "2026-11-10" });
+    expect(r[0].e1RM).toBeGreaterThan(r[0].previousE1RM);
+  });
+
+  it("een record van vóór de periode of zonder vorige registratie staat er niet bij", () => {
+    const { sessions } = buildSessions([
+      w("2026-08-01T10:00:00.000Z", [bench([90, 5])]),
+      w("2026-08-10T10:00:00.000Z", [bench([100, 5])]),
+      w("2026-11-10T10:00:00.000Z", [makeExercise("Squat", [[120, 5]])]),
+    ]);
+    expect(recentRecords(sessions, TODAY)).toEqual([]);
+  });
+
+  it("gelijk of lager is geen record, en opwarmsets tellen niet", () => {
+    const ex = makeExercise("Bench Press", [[100, 5]]);
+    ex.sets = [{ setNumber: 1, weight: 150, reps: 5, isWarmup: true }, ...ex.sets];
+    const { sessions } = buildSessions([
+      w("2026-11-03T10:00:00.000Z", [bench([100, 5])]),
+      w("2026-11-10T10:00:00.000Z", [ex]),
+    ]);
+    expect(recentRecords(sessions, TODAY)).toEqual([]);
+  });
+});
