@@ -298,6 +298,20 @@ const Statistics = () => {
           ) : (
             <>
               <ChartCard
+                title="Beste werkset (geschat 1RM)"
+                description="Per sessie de werkset met het hoogste geschatte 1RM. Opwarmsets tellen niet mee."
+                isEmpty={progression.length === 0}
+                emptyMessage="Geen setgegevens voor deze oefening in deze selectie."
+                tableHeaders={["Datum", "Beste werkset", "Geschat 1RM (kg)"]}
+                tableRows={progression.map((p) => [
+                  formatShortDate(p.dateKey),
+                  p.bestSet ? `${formatNumber(p.bestSet.weight)} kg × ${p.bestSet.reps}` : "–",
+                  formatNumber(p.best1RM),
+                ])}
+              >
+                <MetricChart kind="line" data={progressionData((p) => p.best1RM)} name="Geschat 1RM (kg)" ariaLabel="Lijngrafiek: geschat 1RM van de beste werkset per sessie in kg" />
+              </ChartCard>
+              <ChartCard
                 title="Gewicht (zwaarste set)"
                 isEmpty={progression.length === 0}
                 emptyMessage="Geen setgegevens voor deze oefening in deze selectie."

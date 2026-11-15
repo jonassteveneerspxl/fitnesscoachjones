@@ -387,3 +387,28 @@ describe("opwarmsets in het formulier", () => {
     ).toBeNull();
   });
 });
+
+import { suggestNextTarget, REP_CEILING } from "@/utils/lastPerformance";
+import type { LastPerformance } from "@/utils/lastPerformance";
+
+describe("volgende keer proberen", () => {
+  const last = (sets: LastPerformance["sets"]): LastPerformance => ({ workoutId: "x", startedAt: "2026-10-01T10:00:00.000Z", timeZone: "UTC", sets, volume: 0, maxWeight: 0 });
+
+  it("stelt één rep meer voor op je beste werkset", () => {
+    expect(suggestNextTarget(last([{ weight: 80, reps: 6 }, { weight: 100, reps: 2 }, { weight: 80, reps: 8 }]))).toEqual({ weight: 100, reps: 3, kind: "reps" });
+  });
+  it("stelt iets zwaarder voor als je al op de bovenkant van het herhalingsbereik zat", () => {
+    expect(suggestNextTarget(last([{ weight: 30, reps: REP_CEILING }]))).toEqual({ weight: 32.5, reps: 8, kind: "weight" });
+  });
+  it("negeert opwarmsets en geeft niets zonder werkset of zonder gewicht", () => {
+    expect(suggestNextTarget(last([{ weight: 150, reps: 1, isWarmup: true }, { weight: 80, reps: 5 }]))).toEqual({ weight: 80, reps: 6, kind: "reps" });
+    expect(suggestNextTarget(last([{ weight: 20, reps: 10, isWarmup: true }]))).toBeNull();
+    expect(suggestNextTarget(last([{ weight: 0, reps: 10 }]))).toBeNull();
+  });
+  it("het formulier toont het voorstel naast vorige keer", () => {
+    const prev = makeWorkout({ id: "t", startedAt: "2026-10-13T10:00:00.000Z", exercises: [makeExercise("Skull Crushers", [[30, 10], [30, 9]])] });
+    render(<WorkoutForm onSubmit={vi.fn()} history={[prev]} />);
+    pick("Skull Crushers");
+    expect(screen.getByTestId("next-target").textContent).toContain("30 kg × 11");
+  });
+});

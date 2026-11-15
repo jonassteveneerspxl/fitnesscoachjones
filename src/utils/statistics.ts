@@ -326,6 +326,18 @@ export interface ProgressionPoint {
   exerciseVolume: number;
   best1RM: number;
   setCount: number;
+  /** Beste werkset van de sessie: de set met het hoogste geschatte 1RM (bij gelijkspel de zwaarste). Opwarmsets tellen niet. */
+  bestSet: { weight: number; reps: number } | null;
+}
+
+/** Beste werkset = de set met het hoogste geschatte 1RM, zodat sets met verschillende reps eerlijk vergelijkbaar zijn. */
+export function bestWorkSet(sets: { weight: number; reps: number }[]): { weight: number; reps: number } | null {
+  let best: { weight: number; reps: number; e1rm: number } | null = null;
+  for (const set of sets) {
+    const e1rm = set.weight > 0 ? calculate1RM(set.weight, set.reps) : 0;
+    if (!best || e1rm > best.e1rm || (e1rm === best.e1rm && set.weight > best.weight)) best = { weight: set.weight, reps: set.reps, e1rm };
+  }
+  return best ? { weight: best.weight, reps: best.reps } : null;
 }
 
 export function exerciseProgression(sessions: Session[], exerciseKey: string): ProgressionPoint[] {
@@ -342,6 +354,7 @@ export function exerciseProgression(sessions: Session[], exerciseKey: string): P
         exerciseVolume: round1(e.stats.exerciseVolume),
         best1RM: e.stats.best1RM,
         setCount: e.stats.setCount,
+        bestSet: bestWorkSet(e.sets),
       });
     }
   }

@@ -7,6 +7,7 @@ import {
   compareWorkoutTotals,
   countPerPeriod,
   exerciseProgression,
+  bestWorkSet,
   filterSessions,
   listExercises,
   personalRecords,
@@ -387,5 +388,36 @@ describe("datakwaliteit en samenvatting", () => {
     ]);
     expect(assessDataQuality(built)).toEqual({ totalWorkouts: 3, withoutDate: 1, withoutSetData: 1 });
     expect(summarize(built.sessions)).toEqual({ sessions: 2, totalVolume: 400, exercises: 1 });
+  });
+});
+
+describe("bestWorkSet en beste werkset per sessie", () => {
+  it("kiest de set met het hoogste geschatte 1RM; bij gelijkspel de zwaarste", () => {
+    expect(bestWorkSet([{ weight: 80, reps: 6 }, { weight: 100, reps: 2 }, { weight: 80, reps: 8 }])).toEqual({ weight: 100, reps: 2 }); // 107 > 101 > 96
+    expect(bestWorkSet([{ weight: 60, reps: 12 }, { weight: 80, reps: 1 }])).toEqual({ weight: 60, reps: 12 }); // 84 > 83
+    expect(bestWorkSet([{ weight: 90, reps: 3 }, { weight: 100, reps: 1 }, { weight: 99, reps: 1 }])).toEqual({ weight: 100, reps: 1 });
+    expect(bestWorkSet([])).toBeNull();
+    expect(bestWorkSet([{ weight: 0, reps: 12 }])).toEqual({ weight: 0, reps: 12 });
+  });
+
+  it("de progressie toont per sessie de beste werkset en negeert opwarmsets", () => {
+    const w = makeWorkout({
+      id: "bw",
+      startedAt: "2026-10-05T10:00:00.000Z",
+      exercises: [
+        {
+          ...makeExercise("Bench Press", [[60, 8]]),
+          sets: [
+            { setNumber: 1, weight: 150, reps: 1, isWarmup: true },
+            { setNumber: 2, weight: 80, reps: 6 },
+            { setNumber: 3, weight: 100, reps: 2 },
+            { setNumber: 4, weight: 80, reps: 8 },
+          ],
+        },
+      ],
+    });
+    const points = exerciseProgression(buildSessions([w]).sessions, "bench press");
+    expect(points[0].bestSet).toEqual({ weight: 100, reps: 2 }); // de opwarmset van 150 telt niet
+    expect(points[0].best1RM).toBe(107);
   });
 });
