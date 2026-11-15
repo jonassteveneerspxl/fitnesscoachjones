@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { ExerciseCatalogProvider, ExerciseStore, useExerciseCatalog } from "@/context/ExerciseCatalogContext";
 import type { CustomExercise } from "@/utils/customExercises";
-import type { CustomExercise } from "@/utils/customExercises";
 import { ExerciseSelector } from "@/components/ExerciseSelector";
 import { defaultPplFor, mergeCatalog, parseCustomExercise, searchIn, validateNewExercise } from "@/utils/customExercises";
 import { exercises as builtIn } from "@/data/exercises";

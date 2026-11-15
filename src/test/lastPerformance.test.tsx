@@ -239,3 +239,151 @@ describe("snelstart", () => {
     expect(screen.queryByRole("button", { name: /zelfde als/i })).toBeNull();
   });
 });
+
+import { calculateVolumeFromSets, getBest1RMFromSets, summarizeExerciseSets, suggestWarmups } from "@/utils/fitnessCalculations";
+import { loadDraft, saveDraft } from "@/utils/workoutDraft";
+import { normalizeWorkout } from "@/utils/workoutNormalization";
+import { buildSessions, personalRecords } from "@/utils/statistics";
+import { detectPRs } from "@/utils/fitnessCalculations";
+import { MemoryStorage } from "./factories";
+
+describe("opwarmsets: berekeningen", () => {
+  const bench = [
+    { weight: 20, reps: 12, isWarmup: true },
+    { weight: 60, reps: 8, isWarmup: true },
+    { weight: 80, reps: 6 },
+    { weight: 100, reps: 2 },
+    { weight: 80, reps: 8 },
+  ];
+
+  it("volume, 1RM en samenvatting tellen alleen werksets", () => {
+    expect(calculateVolumeFromSets(bench)).toBe(80 * 6 + 100 * 2 + 80 * 8);
+    expect(getBest1RMFromSets(bench)).toBe(Math.max(...[[80, 6], [100, 2], [80, 8]].map(([w, r]) => Math.round(w * (1 + r / 30)))));
+    const s = summarizeExerciseSets(bench);
+    expect(s.setCount).toBe(3);
+    expect(s.maxWeight).toBe(100);
+    expect(s.totalReps).toBe(16);
+  });
+
+  it("zonder markering verandert er niets (bestaande data blijft werksets)", () => {
+    const old = bench.map(({ weight, reps }) => ({ weight, reps }));
+    expect(summarizeExerciseSets(old).setCount).toBe(5);
+    expect(calculateVolumeFromSets(old)).toBe(20 * 12 + 60 * 8 + 80 * 6 + 100 * 2 + 80 * 8);
+  });
+
+  it("een opwarmset van 140 kg breekt nooit een record", () => {
+    const earlier = makeWorkout({ id: "e", startedAt: "2026-10-01T10:00:00.000Z", exercises: [makeExercise("Bench Press", [[100, 5]])] });
+    const { prTypes } = detectPRs([{ weight: 140, reps: 1, isWarmup: true }, { weight: 90, reps: 5 }], "Bench Press", [earlier]);
+    expect(prTypes).toEqual([]);
+  });
+
+  it("statistieken: records en sessies negeren opwarmsets, maar tellen ze apart", () => {
+    const w = makeWorkout({
+      id: "s",
+      startedAt: "2026-10-05T10:00:00.000Z",
+      exercises: [{ ...makeExercise("Bench Press", [[60, 8]]), sets: [{ setNumber: 1, weight: 150, reps: 1, isWarmup: true }, { setNumber: 2, weight: 80, reps: 5 }] }],
+    });
+    const { sessions } = buildSessions([w]);
+    expect(sessions[0].exercises[0].warmupCount).toBe(1);
+    expect(sessions[0].exercises[0].stats.maxWeight).toBe(80);
+    expect(personalRecords(sessions)[0].records.maxWeight?.value).toBe(80);
+  });
+
+  it("normalisatie behoudt de markering en re-berekent totalen zonder opwarmsets", () => {
+    const { workout } = normalizeWorkout({
+      ...makeWorkout({ id: "n" }),
+      exercises: [{ exercise: "Bench Press", sets: [{ setNumber: 1, weight: 20, reps: 10, isWarmup: true }, { setNumber: 2, weight: 100, reps: 5 }, { setNumber: 3, weight: 50, reps: 5, isWarmup: "ja" }] }],
+    });
+    expect(workout!.exercises[0].sets.map((s) => s.isWarmup)).toEqual([true, undefined, undefined]);
+    expect(workout!.exercises[0].volume).toBe(100 * 5 + 50 * 5);
+    expect(workout!.totalVolume).toBe(750);
+  });
+});
+
+describe("suggestWarmups", () => {
+  it("markeert lichte sets vóór de zwaarste set", () => {
+    expect(suggestWarmups([{ weight: 20, reps: 12 }, { weight: 60, reps: 8 }, { weight: 80, reps: 6 }, { weight: 100, reps: 2 }, { weight: 80, reps: 8 }])).toEqual([true, true, false, false, false]);
+    expect(suggestWarmups([{ weight: 45, reps: 12 }, { weight: 59, reps: 12 }, { weight: 73, reps: 8 }, { weight: 79, reps: 3 }, { weight: 59, reps: 5 }])).toEqual([true, true, false, false, false]);
+  });
+  it("geeft niets voor gelijke gewichten, een set, lege of ongeldige invoer", () => {
+    expect(suggestWarmups([{ weight: 30, reps: 10 }, { weight: 30, reps: 10 }])).toEqual([false, false]);
+    expect(suggestWarmups([{ weight: 50, reps: 5 }])).toEqual([false]);
+    expect(suggestWarmups([{ weight: NaN, reps: 5 }, { weight: 0, reps: 0 }])).toEqual([false, false]);
+    expect(suggestWarmups([])).toEqual([]);
+  });
+});
+
+describe("opwarmsets in het concept", () => {
+  it("het concept onthoudt welke sets opwarmen zijn", () => {
+    const storage = new MemoryStorage();
+    saveDraft(storage, [{ exercise: "Bench Press", sets: [{ weight: "20", reps: "10", warmup: true }, { weight: "100", reps: "5" }], notes: "", isExpanded: true }], "Push");
+    const d = loadDraft(storage)!;
+    expect(d.exercises[0].sets.map((s) => s.warmup)).toEqual([true, undefined]);
+  });
+});
+
+describe("opwarmsets in het formulier", () => {
+  beforeEach(() => localStorage.clear());
+  const onSubmit = vi.fn().mockResolvedValue(true);
+  beforeEach(() => onSubmit.mockClear());
+  const fill = (i: number, w: string, r: string) => {
+    fireEvent.change(screen.getAllByPlaceholderText("Gewicht")[i], { target: { value: w } });
+    fireEvent.change(screen.getAllByPlaceholderText("Reps")[i], { target: { value: r } });
+  };
+  const warm = (n: number) => screen.getByRole("button", { name: new RegExp(`set ${n} opwarmset`, "i") });
+
+  it("sla op met opwarmsets gemarkeerd: ze staan erbij maar tellen niet mee in volume", async () => {
+    render(<WorkoutForm onSubmit={onSubmit} />);
+    pick("Bench Press");
+    fill(0, "20", "10");
+    fireEvent.click(screen.getByRole("button", { name: /set toevoegen/i }));
+    fill(1, "100", "5");
+    fireEvent.click(warm(1));
+    expect(warm(1).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: /workout opslaan/i }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const ex = onSubmit.mock.calls[0][0][0];
+    expect(ex.sets).toEqual([{ setNumber: 1, weight: 20, reps: 10, isWarmup: true }, { setNumber: 2, weight: 100, reps: 5 }]);
+    expect(ex.volume).toBe(500);
+  });
+
+  it("de knop 'lichte sets markeren' stelt voor en laat jou kiezen", () => {
+    render(<WorkoutForm onSubmit={onSubmit} />);
+    pick("Bench Press");
+    fill(0, "20", "10");
+    fireEvent.click(screen.getByRole("button", { name: /set toevoegen/i }));
+    fill(1, "60", "8");
+    fireEvent.click(screen.getByRole("button", { name: /set toevoegen/i }));
+    fill(2, "100", "5");
+    fireEvent.click(screen.getByRole("button", { name: /lichte sets vooraf/i }));
+    expect([1, 2, 3].map((n) => warm(n).getAttribute("aria-pressed"))).toEqual(["true", "true", "false"]);
+    expect(screen.queryByRole("button", { name: /lichte sets vooraf/i })).toBeNull();
+    fireEvent.click(warm(2)); // zelf aanpassen
+    expect(warm(2).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("vorige keer neemt de opwarmmarkering mee en het verschil telt alleen werksets", () => {
+    const prev = makeWorkout({
+      id: "h",
+      startedAt: "2026-10-13T10:00:00.000Z",
+      exercises: [{ ...makeExercise("Bench Press", [[60, 8]]), sets: [{ setNumber: 1, weight: 20, reps: 10, isWarmup: true }, { setNumber: 2, weight: 100, reps: 5 }] }],
+    });
+    render(<WorkoutForm onSubmit={onSubmit} history={[prev]} />);
+    pick("Bench Press");
+    expect([1, 2].map((n) => warm(n).getAttribute("aria-pressed"))).toEqual(["true", "false"]);
+    const hint = screen.getByTestId("last-performance").textContent ?? "";
+    expect(hint).toContain("Volume: 500 kg"); // 20 × 10 telt niet mee
+    fireEvent.click(screen.getByRole("checkbox", { name: /set 1 afvinken/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /set 2 afvinken/i }));
+    expect(screen.getByTestId("last-performance").textContent).toContain("gelijk aan vorige keer");
+  });
+
+  it("een keer met alleen opwarmsets telt niet als vorige keer", () => {
+    expect(
+      findLastPerformance(
+        [makeWorkout({ id: "o", exercises: [{ ...makeExercise("Bench Press", [[20, 10]]), sets: [{ setNumber: 1, weight: 20, reps: 10, isWarmup: true }] }] })],
+        "Bench Press"
+      )
+    ).toBeNull();
+  });
+});

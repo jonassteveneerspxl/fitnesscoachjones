@@ -11,7 +11,7 @@ export interface LastPerformance {
   workoutId: string;
   startedAt: string;
   timeZone: string | null;
-  sets: { weight: number; reps: number }[];
+  sets: { weight: number; reps: number; isWarmup?: boolean }[];
   /** Som van gewicht × reps. */
   volume: number;
   maxWeight: number;
@@ -44,8 +44,9 @@ export function findLastPerformance(
     const sets = [...log.sets]
       .sort((a, b) => a.setNumber - b.setNumber)
       .filter((s) => Number.isFinite(s.weight) && Number.isFinite(s.reps) && s.weight >= 0 && s.reps >= 1)
-      .map((s) => ({ weight: s.weight, reps: s.reps }));
-    if (sets.length === 0) continue;
+      .map((s) => (s.isWarmup === true ? { weight: s.weight, reps: s.reps, isWarmup: true } : { weight: s.weight, reps: s.reps }));
+    // Alleen een keer met minstens één werkset telt als "vorige keer".
+    if (!sets.some((st) => st.isWarmup !== true)) continue;
     best = { ms, workout, sets };
   }
   if (!best) return null;

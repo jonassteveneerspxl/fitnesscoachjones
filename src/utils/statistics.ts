@@ -39,6 +39,8 @@ export interface SessionExercise {
   exerciseName: string;
   /** Alleen geldige sets (eindig, gewicht ≥ 0, reps ≥ 1). */
   sets: SetLike[];
+  /** Aantal opwarmsets (tellen niet mee in `sets` en `stats`). */
+  warmupCount: number;
   stats: ExerciseSessionStats;
   hasSets: boolean;
 }
@@ -85,13 +87,16 @@ export function workoutTimeZone(workout: Workout, fallback = getDeviceTimeZone()
 
 function toSessionExercise(raw: Workout["exercises"][number]): SessionExercise {
   const stats = summarizeExerciseSets(raw.sets);
-  const valid = raw.sets.filter(
-    (s) => Number.isFinite(s.weight) && Number.isFinite(s.reps) && s.weight >= 0 && s.reps >= 1
-  );
+  const isValid = (s: { weight: number; reps: number }) =>
+    Number.isFinite(s.weight) && Number.isFinite(s.reps) && s.weight >= 0 && s.reps >= 1;
+  // Records en voortgang rekenen alleen met werksets; opwarmsets tellen we apart.
+  const valid = raw.sets.filter((s) => isValid(s) && s.isWarmup !== true);
+  const warmupCount = raw.sets.filter((s) => isValid(s) && s.isWarmup === true).length;
   return {
     exerciseKey: normalizeExerciseName(raw.exercise),
     exerciseName: raw.exercise.trim(),
     sets: valid,
+    warmupCount,
     stats,
     hasSets: stats.setCount > 0,
   };

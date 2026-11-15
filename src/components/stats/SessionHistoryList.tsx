@@ -83,6 +83,12 @@ export function SessionHistoryList({ sessions, allSessions }: SessionHistoryList
                       ) : (
                         <span className="text-muted-foreground">geen geldige sets</span>
                       )}
+                      {e.warmupCount > 0 && (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          + {e.warmupCount} opwarmset{e.warmupCount === 1 ? "" : "s"}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
