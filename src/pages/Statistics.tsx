@@ -4,10 +4,14 @@ import { BarChart3, Dumbbell } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { InfoTip } from "@/components/InfoTip";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChartCard } from "@/components/stats/ChartCard";
 import { MetricChart, MetricDatum } from "@/components/stats/MetricChart";
+import { OverviewSection } from "@/components/stats/OverviewSection";
+import { CollapsibleSection } from "@/components/stats/CollapsibleSection";
 import { StatsFilters } from "@/components/stats/StatsFilters";
 import { DEFAULT_FILTERS, FilterState } from "@/components/stats/filterState";
 import { RecordsTable } from "@/components/stats/RecordsTable";
@@ -29,6 +33,9 @@ import {
   summarize,
   volumePerPeriod,
   volumePerSession,
+  compareWeeks,
+  recentRecords,
+  exerciseTrends,
 } from "@/utils/statistics";
 import {
   describeWorkoutMoment,
@@ -48,6 +55,7 @@ const Statistics = () => {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [countBy, setCountBy] = useState<Granularity>("week");
   const [volumeBy, setVolumeBy] = useState<VolumeGranularity>("session");
+  const [exerciseQuery, setExerciseQuery] = useState("");
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
 
   const built = useMemo(() => buildSessions(workouts), [workouts]);
@@ -73,6 +81,9 @@ const Statistics = () => {
     [built.sessions, range, filters.types, filters.exerciseKey]
   );
   const newestFirst = useMemo(() => [...sessions].reverse(), [sessions]);
+  const weeks = useMemo(() => compareWeeks(built.sessions, today), [built.sessions, today]);
+  const recent = useMemo(() => recentRecords(built.sessions, today), [built.sessions, today]);
+  const trends = useMemo(() => exerciseTrends(built.sessions, today), [built.sessions, today]);
   const summary = useMemo(() => summarize(sessions), [sessions]);
 
   const periodRange = useMemo(
@@ -177,6 +188,13 @@ const Statistics = () => {
           </Alert>
         )}
 
+        <OverviewSection
+          weeks={weeks}
+          trends={trends}
+          records={recent}
+          onSelectExercise={(key) => setFilters({ ...filters, exerciseKey: key })}
+        />
+
         <StatsFilters
           value={filters}
           onChange={setFilters}
@@ -210,11 +228,18 @@ const Statistics = () => {
         <section className="grid grid-cols-3 gap-3" aria-label="Samenvatting">
           {[
             { label: "Trainingen", value: formatNumber(summary.sessions) },
-            { label: "Totaal volume", value: formatKg(summary.totalVolume) },
+            { label: "Totaal volume", value: formatKg(summary.totalVolume), tip: true },
             { label: "Oefeningen", value: formatNumber(summary.exercises) },
           ].map((k) => (
             <div key={k.label} className="p-4 rounded-xl gradient-card border border-border">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{k.label}</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                {k.label}
+                {"tip" in k && (
+                  <InfoTip term="Volume">
+                    Gewicht × herhalingen, opgeteld over al je sets. Opwarmsets tellen niet mee.
+                  </InfoTip>
+                )}
+              </p>
               <p className="text-xl font-bold text-foreground mt-1">{k.value}</p>
             </div>
           ))}
@@ -277,9 +302,19 @@ const Statistics = () => {
 
           {!filters.exerciseKey ? (
             <div className="p-5 rounded-2xl gradient-card border border-border space-y-3">
-              <p className="text-sm text-muted-foreground">Kies een oefening om de progressie te zien.</p>
+              <p className="text-sm text-muted-foreground">Zoek een oefening om de progressie te zien.</p>
+              <Input
+                type="search"
+                value={exerciseQuery}
+                onChange={(e) => setExerciseQuery(e.target.value)}
+                placeholder="Zoek een oefening…"
+                aria-label="Zoek een oefening"
+              />
               <div className="flex flex-wrap gap-2">
-                {exerciseOptions.slice(0, 6).map((o) => (
+                {exerciseOptions
+                  .filter((o) => !exerciseQuery.trim() || o.name.toLowerCase().includes(exerciseQuery.trim().toLowerCase()))
+                  .slice(0, 8)
+                  .map((o) => (
                   <Button
                     key={o.key}
                     type="button"
@@ -340,29 +375,23 @@ const Statistics = () => {
           )}
         </section>
 
-        <section className="p-5 rounded-2xl gradient-card border border-border space-y-3" aria-label="Persoonlijke records">
-          <div>
-            <h2 className="text-base font-semibold text-foreground">Persoonlijke records</h2>
-            <p className="text-xs text-muted-foreground">
-              Binnen de gekozen filters. Zwaarste set: hoogste gewicht in één set. Beste set: hoogste gewicht × reps in
-              één set. Oefeningvolume: hoogste totaal in één sessie. Bij gelijke waarden telt de eerste.
-            </p>
-          </div>
+        <CollapsibleSection
+          title="Persoonlijke records"
+          description="Binnen de gekozen filters. Zwaarste set: hoogste gewicht in één set. Beste set: hoogste gewicht × reps in één set. Oefeningvolume: hoogste totaal in één sessie."
+        >
           {records.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">Nog geen records in deze selectie.</p>
           ) : (
             <RecordsTable records={records} />
           )}
-        </section>
+        </CollapsibleSection>
 
-        <section className="p-5 rounded-2xl gradient-card border border-border space-y-3" aria-label="Vooruitgang ten opzichte van de vorige sessie">
+        <CollapsibleSection
+          title="Vooruitgang t.o.v. vorige sessie"
+          ariaLabel="Vooruitgang ten opzichte van de vorige sessie"
+          description="Elke oefening wordt vergeleken met de vorige keer dat je die deed, ook buiten de gekozen periode."
+        >
           <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <h2 className="text-base font-semibold text-foreground">Vooruitgang t.o.v. vorige sessie</h2>
-              <p className="text-xs text-muted-foreground">
-                Elke oefening wordt vergeleken met de vorige keer dat je die deed, ook buiten de gekozen periode.
-              </p>
-            </div>
             {newestFirst.length > 0 && selectedSession && (
               <Select value={selectedSession.workoutId} onValueChange={setSelectedWorkoutId}>
                 <SelectTrigger className="w-64 bg-background border-border" aria-label="Kies een sessie">
@@ -384,21 +413,18 @@ const Statistics = () => {
           ) : (
             <p className="text-sm text-muted-foreground py-6 text-center">Geen workouts voor deze selectie.</p>
           )}
-        </section>
+        </CollapsibleSection>
 
-        <section className="p-5 rounded-2xl gradient-card border border-border space-y-3" aria-label="Historiek">
-          <div>
-            <h2 className="text-base font-semibold text-foreground">Historiek</h2>
-            <p className="text-xs text-muted-foreground">
-              Eerdere sessies, nieuwste eerst. Open een sessie voor de sets en de vergelijking met de vorige keer.
-            </p>
-          </div>
+        <CollapsibleSection
+          title="Historiek"
+          description="Eerdere sessies, nieuwste eerst. Open een sessie voor de sets en de vergelijking met de vorige keer."
+        >
           {newestFirst.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">Geen workouts voor deze selectie.</p>
           ) : (
             <SessionHistoryList sessions={newestFirst} allSessions={built.sessions} />
           )}
-        </section>
+        </CollapsibleSection>
       </main>
     </div>
   );
