@@ -6,6 +6,7 @@ import { TrainingType, Workout } from "@/types/workout";
 import { normalizeExerciseName } from "@/utils/exerciseNames";
 import { summarizeExerciseSets } from "@/utils/fitnessCalculations";
 import { parseInstant } from "@/utils/dates";
+import { bestWorkSet } from "@/utils/statistics";
 
 export interface LastPerformance {
   workoutId: string;
@@ -77,4 +78,27 @@ export function findLastWorkout(workouts: Workout[], trainingType?: TrainingType
     if (!best || instant.getTime() > best.ms) best = { ms: instant.getTime(), workout };
   }
   return best?.workout ?? null;
+}
+
+export const REP_CEILING = 12;
+export const WEIGHT_STEP_KG = 2.5;
+
+export interface NextTarget {
+  weight: number;
+  reps: number;
+  /** "reps": één rep meer; "weight": bovenkant van het herhalingsbereik bereikt, dus iets zwaarder. */
+  kind: "reps" | "weight";
+}
+
+/**
+ * Een voorstel voor deze keer, gebaseerd op je beste werkset van vorige keer: eerst één rep meer, en pas als je
+ * al op {@link REP_CEILING} herhalingen zat iets zwaarder met minder reps. Alleen een suggestie, geen opdracht.
+ */
+export function suggestNextTarget(last: LastPerformance): NextTarget | null {
+  const best = bestWorkSet(last.sets.filter((s) => s.isWarmup !== true));
+  if (!best || best.weight <= 0) return null;
+  if (best.reps >= REP_CEILING) {
+    return { weight: Math.round((best.weight + WEIGHT_STEP_KG) * 10) / 10, reps: Math.max(6, REP_CEILING - 4), kind: "weight" };
+  }
+  return { weight: best.weight, reps: best.reps + 1, kind: "reps" };
 }

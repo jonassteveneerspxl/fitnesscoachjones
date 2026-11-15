@@ -39,7 +39,7 @@ import { clearDraft, draftKeyFor, loadDraft, saveDraft } from "@/utils/workoutDr
 import { useOptionalAuth } from "@/context/AuthContext";
 import { getBrowserStorage } from "@/utils/workoutStorage";
 import { DEFAULT_REST_SECONDS, RestTimer } from "@/components/RestTimer";
-import { LastPerformance, findLastPerformance, findLastWorkout } from "@/utils/lastPerformance";
+import { LastPerformance, findLastPerformance, findLastWorkout, suggestNextTarget } from "@/utils/lastPerformance";
 import { describeWorkoutMoment } from "@/utils/dates";
 
 interface ExerciseFormData {
@@ -303,6 +303,17 @@ export function WorkoutForm({
           {last.sets.map((st) => `${nlNumber(st.weight)} kg × ${st.reps}`).join(" · ")}
         </p>
         <p className="text-muted-foreground">Volume: {nlNumber(last.volume)} kg</p>
+        {(() => {
+          const target = suggestNextTarget(last);
+          return target ? (
+            <p className="text-foreground" data-testid="next-target">
+              Probeer: {nlNumber(target.weight)} kg × {target.reps}
+              <span className="text-muted-foreground">
+                {target.kind === "reps" ? " (één rep meer)" : " (iets zwaarder)"}
+              </span>
+            </p>
+          ) : null;
+        })()}
         {now > 0 && (
           <p className={diff >= 0 ? "text-primary font-medium" : "text-muted-foreground"}>
             Nu: {nlNumber(now)} kg ·{" "}
