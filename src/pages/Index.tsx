@@ -4,7 +4,6 @@ import { WorkoutForm } from "@/components/WorkoutForm";
 import { CoachFeedback } from "@/components/CoachFeedback";
 import { WorkoutHistory } from "@/components/WorkoutHistory";
 import { AppHeader } from "@/components/AppHeader";
-import { DataManager } from "@/components/DataManager";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -18,14 +17,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { WelcomeCard } from "@/components/WelcomeCard";
 import { useOptionalAuth } from "@/context/AuthContext";
-import { LocalDataTransfer } from "@/components/LocalDataTransfer";
 import { useWorkoutLogs } from "@/hooks/useWorkoutLogs";
 import { generateCoachResponse } from "@/utils/fitnessCalculations";
 import { describeWorkoutMoment, getDeviceTimeZone } from "@/utils/dates";
 import { generateId } from "@/utils/ids";
 import { CoachResponse, Workout, ExerciseLog, TrainingType } from "@/types/workout";
-import { History, Sparkles, Database } from "lucide-react";
+import { History, Sparkles } from "lucide-react";
 
 const Index = () => {
   const auth = useOptionalAuth();
@@ -143,11 +142,13 @@ const Index = () => {
           </Alert>
         )}
 
+        {!isLoading && workouts.length === 0 && <WelcomeCard />}
+
         {/* Workout Form Card */}
         <section className="p-6 rounded-2xl gradient-card border border-border">
           <div className="flex items-center gap-2 mb-6">
             <Sparkles className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold text-foreground">Nieuwe Workout</h2>
+            <h2 className="text-lg font-semibold text-foreground">Nieuwe training</h2>
           </div>
           <WorkoutForm
             history={workouts}
@@ -164,7 +165,7 @@ const Index = () => {
           <div className="flex items-center gap-2 mb-6">
             <History className="w-5 h-5 text-primary" />
             <h2 className="text-lg font-semibold text-foreground">
-              {showAll ? "Alle Workouts" : "Recente Workouts"}
+              {showAll ? "Alle trainingen" : "Recente trainingen"}
             </h2>
           </div>
           <WorkoutHistory
@@ -179,24 +180,9 @@ const Index = () => {
               className="w-full mt-4"
               onClick={() => setShowAll((v) => !v)}
             >
-              {showAll ? "Toon alleen recente workouts" : `Toon alle ${workouts.length} workouts`}
+              {showAll ? "Toon alleen recente trainingen" : `Toon alle ${workouts.length} trainingen`}
             </Button>
           )}
-        </section>
-
-        {/* Data */}
-        <section className="p-6 rounded-2xl gradient-card border border-border">
-          <div className="flex items-center gap-2 mb-4">
-            <Database className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold text-foreground">Gegevens</h2>
-          </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            {auth?.user
-              ? "Je workouts staan in je account en zijn op elk toestel beschikbaar waar je inlogt. Exporteren kan nog steeds als extra back-up."
-              : "Je workouts staan alleen in deze browser. Exporteer ze regelmatig als back-up of om ze naar een ander toestel mee te nemen."}
-          </p>
-          {auth?.user && <LocalDataTransfer onImport={importWorkouts} disabled={storageInfo.readOnly} />}
-          <DataManager workouts={workouts} onImport={importWorkouts} disabled={storageInfo.readOnly} />
         </section>
       </main>
 

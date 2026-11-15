@@ -1,9 +1,18 @@
 import { useState } from "react";
-import { LogOut } from "lucide-react";
+import { LogOut, Settings, User } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useOptionalAuth } from "@/context/AuthContext";
 import { useOptionalRepository } from "@/context/RepositoryContext";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,15 +55,29 @@ export function UserMenu() {
 
   return (
     <>
-      <div className="flex items-center gap-2 shrink-0">
-        <span className="hidden sm:inline text-xs text-muted-foreground max-w-[10rem] truncate">
-          {user.email ?? user.displayName}
-        </span>
-        <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void requestSignOut()}>
-          <LogOut className="w-4 h-4 mr-1" />
-          Uitloggen
-        </Button>
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="ghost" size="icon" aria-label="Account" disabled={busy}>
+            <User className="w-5 h-5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-[12rem]">
+          <DropdownMenuLabel className="font-normal text-xs text-muted-foreground truncate max-w-[14rem]">
+            {user.email ?? user.displayName}
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link to="/instellingen">
+              <Settings className="w-4 h-4 mr-2" />
+              Instellingen
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => void requestSignOut()}>
+            <LogOut className="w-4 h-4 mr-2" />
+            Uitloggen
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <AlertDialog open={confirmUnsynced} onOpenChange={setConfirmUnsynced}>
         <AlertDialogContent>
           <AlertDialogHeader>

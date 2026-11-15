@@ -1,3 +1,4 @@
+import { trainingTypeLabel } from "@/utils/trainingTypeLabel";
 import { useState } from "react";
 import { Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +42,7 @@ export function SessionHistoryList({ sessions, allSessions }: SessionHistoryList
                   </span>
                   {s.trainingType !== "Onbekend" && (
                     <Badge variant="outline" className="text-xs">
-                      {s.trainingType}
+                      {trainingTypeLabel(s.trainingType)}
                     </Badge>
                   )}
                 </div>

@@ -10,6 +10,7 @@ import { render, screen, fireEvent, waitFor, within, cleanup } from "@testing-li
 import { MemoryRouter } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import Index from "@/pages/Index";
+import Settings from "@/pages/Settings";
 import { LEGACY_BACKUP_KEY, LEGACY_STORAGE_KEY, STORAGE_KEY_V2 } from "@/utils/workoutStorage";
 import { makeExercise, makeWorkout } from "./factories";
 
@@ -21,6 +22,13 @@ vi.mock("@/components/ExerciseSelector", () => ({
 
 vi.mock("@/components/ui/select", async () => await import("./nativeSelectMock"));
 
+const renderSettings = () =>
+  render(
+    <MemoryRouter>
+      <Settings />
+    </MemoryRouter>
+  );
+
 const renderIndex = () =>
   render(
     <MemoryRouter>
@@ -29,9 +37,9 @@ const renderIndex = () =>
     </MemoryRouter>
   );
 
-/** De sectie "Recente Workouts" (niet het formulier, waar dezelfde woorden als opties voorkomen). */
+/** De sectie "Recente trainingen" (niet het formulier, waar dezelfde woorden als opties voorkomen). */
 const historySection = async () =>
-  (await screen.findByRole("heading", { name: /recente workouts|alle workouts/i })).closest(
+  (await screen.findByRole("heading", { name: /recente trainingen|alle trainingen/i })).closest(
     "section"
   ) as HTMLElement;
 
@@ -57,7 +65,7 @@ async function logWorkout(opts: {
     fireEvent.change(weights[i], { target: { value: opts.sets[i][0] } });
     fireEvent.change(reps[i], { target: { value: opts.sets[i][1] } });
   }
-  fireEvent.click(scope.getByRole("button", { name: /workout opslaan/i }));
+  fireEvent.click(scope.getByRole("button", { name: /training opslaan/i }));
 }
 
 beforeEach(() => {
@@ -71,7 +79,7 @@ afterEach(() => {
 describe("registreren en herladen", () => {
   it("slaat een workout op met type, UTC-instant, tijdzone en setnummers, en toont geen record bij de eerste keer", async () => {
     renderIndex();
-    await waitFor(() => expect(screen.getByRole("button", { name: /workout opslaan/i })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: /training opslaan/i })).toBeEnabled());
 
     await logWorkout({ exercise: "Bench Press", sets: [["80", "5"], ["80", "4"]], type: "Push" });
 
@@ -92,7 +100,7 @@ describe("registreren en herladen", () => {
 
   it("bewaart de workout na herladen (nieuwe render op dezelfde opslag)", async () => {
     const first = renderIndex();
-    await waitFor(() => expect(screen.getByRole("button", { name: /workout opslaan/i })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: /training opslaan/i })).toBeEnabled());
     await logWorkout({ exercise: "Squat", sets: [["100", "5"]], type: "Legs" });
     await screen.findByText(/eerste registratie van squat/i);
     first.unmount();
@@ -105,7 +113,7 @@ describe("registreren en herladen", () => {
 
   it("bewaart meerdere workouts op dezelfde dag als afzonderlijke sessies", async () => {
     renderIndex();
-    await waitFor(() => expect(screen.getByRole("button", { name: /workout opslaan/i })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: /training opslaan/i })).toBeEnabled());
     await logWorkout({ exercise: "Bench Press", sets: [["80", "5"]], type: "Push" });
     await screen.findByText("1 oefening");
     await logWorkout({ exercise: "Squat", sets: [["100", "5"]], type: "Legs" });
@@ -120,7 +128,7 @@ describe("registreren en herladen", () => {
 
   it("meldt een echt record bij een zwaardere tweede sessie, met het soort record", async () => {
     renderIndex();
-    await waitFor(() => expect(screen.getByRole("button", { name: /workout opslaan/i })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: /training opslaan/i })).toBeEnabled());
     await logWorkout({ exercise: "Bench Press", sets: [["80", "5"]], type: "Push" });
     await screen.findByText(/eerste registratie/i);
     await logWorkout({ exercise: "bench press", sets: [["85", "5"]], type: "Push" });
@@ -129,7 +137,7 @@ describe("registreren en herladen", () => {
 
   it("slaat niets op en toont een fout bij een gedeeltelijk ingevulde set", async () => {
     renderIndex();
-    await waitFor(() => expect(screen.getByRole("button", { name: /workout opslaan/i })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: /training opslaan/i })).toBeEnabled());
     await logWorkout({ exercise: "Bench Press", sets: [["80", ""]] });
     expect(await screen.findByText(/controleer je sets/i)).toBeInTheDocument();
     expect(readV2()).toBeNull();
@@ -231,7 +239,7 @@ describe("export en import", () => {
     URL.revokeObjectURL = vi.fn();
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
 
-    renderIndex();
+    renderSettings();
     const button = await screen.findByRole("button", { name: /exporteer/i });
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
@@ -245,8 +253,8 @@ describe("export en import", () => {
 
   it("importeert alleen nieuwe workouts en overschrijft bestaande nooit", async () => {
     seedOne();
-    renderIndex();
-    await screen.findByText("1 oefening");
+    renderSettings();
+    await waitFor(() => expect(screen.getByTestId("import-input")).toBeEnabled());
 
     const conflicting = makeWorkout({ id: "w-a", trainingType: "Pull" }); // zelfde id, andere inhoud
     const fresh = makeWorkout({ id: "w-b", startedAt: "2026-04-01T10:00:00.000Z" });
@@ -267,8 +275,8 @@ describe("export en import", () => {
 
   it("weigt een ongeldig bestand af zonder iets te wijzigen", async () => {
     seedOne();
-    renderIndex();
-    await screen.findByText("1 oefening");
+    renderSettings();
+    await waitFor(() => expect(screen.getByTestId("import-input")).toBeEnabled());
     const before = localStorage.getItem(STORAGE_KEY_V2);
     const file = new File(["dit is geen json"], "kapot.json", { type: "application/json" });
     fireEvent.change(screen.getByTestId("import-input"), { target: { files: [file] } });

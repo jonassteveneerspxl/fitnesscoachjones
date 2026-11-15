@@ -15,6 +15,8 @@ import NotFound from "./pages/NotFound";
 const Statistics = lazy(() => import("./pages/Statistics"));
 const CalendarPage = lazy(() => import("./pages/Calendar"));
 
+const SettingsPage = lazy(() => import("./pages/Settings"));
+
 const queryClient = new QueryClient();
 const authService = createFirebaseAuthService();
 
@@ -42,6 +44,14 @@ const App = () => (
             element={
               <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">Laden…</p>}>
                 <CalendarPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/instellingen"
+            element={
+              <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">Laden…</p>}>
+                <SettingsPage />
               </Suspense>
             }
           />

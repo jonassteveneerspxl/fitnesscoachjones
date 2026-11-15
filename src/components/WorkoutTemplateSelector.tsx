@@ -51,14 +51,14 @@ export function WorkoutTemplateSelector({
           className="w-full border-primary/30 hover:border-primary hover:bg-primary/10 text-primary"
         >
           <FileText className="w-4 h-4 mr-2" />
-          Kies Workout Template
+          Kies een schema
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md max-h-[85vh] p-0">
         <DialogHeader className="p-4 pb-0">
           <DialogTitle className="flex items-center gap-2">
             <Dumbbell className="w-5 h-5 text-primary" />
-            Workout Templates
+            Trainingsschema’s
           </DialogTitle>
         </DialogHeader>
 

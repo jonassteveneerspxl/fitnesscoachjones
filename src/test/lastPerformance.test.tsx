@@ -113,7 +113,7 @@ describe("vorige keer in het formulier", () => {
 
   it("een template begint bij de vorige keer", async () => {
     render(<WorkoutForm onSubmit={vi.fn()} history={[newer]} />);
-    fireEvent.click(screen.getByRole("button", { name: /kies workout template/i }));
+    fireEvent.click(screen.getByRole("button", { name: /kies een schema/i }));
     fireEvent.click(await waitFor(() => screen.getByRole("button", { name: /push day - advanced/i })));
     // Eerste oefening van het template is Bench Press: sets van vorige keer (1 set × 80 kg).
     expect(values("Gewicht")).toEqual(["80"]);
@@ -137,7 +137,7 @@ describe("sets afvinken", () => {
     localStorage.clear();
     onSubmit.mockClear();
   });
-  const save = () => fireEvent.click(screen.getByRole("button", { name: /workout opslaan/i }));
+  const save = () => fireEvent.click(screen.getByRole("button", { name: /training opslaan/i }));
   const check = (n: number) => screen.getByRole("checkbox", { name: new RegExp(`set ${n} `, "i") });
 
   it("voorgestelde sets staan uit en worden niet opgeslagen zolang je ze niet afvinkt", async () => {
@@ -340,7 +340,7 @@ describe("opwarmsets in het formulier", () => {
     fill(1, "100", "5");
     fireEvent.click(warm(1));
     expect(warm(1).getAttribute("aria-pressed")).toBe("true");
-    fireEvent.click(screen.getByRole("button", { name: /workout opslaan/i }));
+    fireEvent.click(screen.getByRole("button", { name: /training opslaan/i }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     const ex = onSubmit.mock.calls[0][0][0];
     expect(ex.sets).toEqual([{ setNumber: 1, weight: 20, reps: 10, isWarmup: true }, { setNumber: 2, weight: 100, reps: 5 }]);

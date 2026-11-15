@@ -1,3 +1,4 @@
+import { trainingTypeLabel } from "@/utils/trainingTypeLabel";
 import { Workout } from "@/types/workout";
 import { Dumbbell, Calendar, ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -51,7 +52,7 @@ export function WorkoutHistory({ workouts, onEdit, onDelete }: WorkoutHistoryPro
                   </p>
                   {workout.trainingType !== "Onbekend" && (
                     <Badge variant="outline" className="text-xs">
-                      {workout.trainingType}
+                      {trainingTypeLabel(workout.trainingType)}
                     </Badge>
                   )}
                 </div>
