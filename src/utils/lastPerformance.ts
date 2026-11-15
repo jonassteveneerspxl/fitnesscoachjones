@@ -12,7 +12,7 @@ export interface LastPerformance {
   workoutId: string;
   startedAt: string;
   timeZone: string | null;
-  sets: { weight: number; reps: number; isWarmup?: boolean }[];
+  sets: { weight: number; reps: number }[];
   /** Som van gewicht × reps. */
   volume: number;
   maxWeight: number;
@@ -45,9 +45,8 @@ export function findLastPerformance(
     const sets = [...log.sets]
       .sort((a, b) => a.setNumber - b.setNumber)
       .filter((s) => Number.isFinite(s.weight) && Number.isFinite(s.reps) && s.weight >= 0 && s.reps >= 1)
-      .map((s) => (s.isWarmup === true ? { weight: s.weight, reps: s.reps, isWarmup: true } : { weight: s.weight, reps: s.reps }));
-    // Alleen een keer met minstens één werkset telt als "vorige keer".
-    if (!sets.some((st) => st.isWarmup !== true)) continue;
+      .map((s) => ({ weight: s.weight, reps: s.reps }));
+    if (sets.length === 0) continue;
     best = { ms, workout, sets };
   }
   if (!best) return null;
@@ -95,7 +94,7 @@ export interface NextTarget {
  * al op {@link REP_CEILING} herhalingen zat iets zwaarder met minder reps. Alleen een suggestie, geen opdracht.
  */
 export function suggestNextTarget(last: LastPerformance): NextTarget | null {
-  const best = bestWorkSet(last.sets.filter((s) => s.isWarmup !== true));
+  const best = bestWorkSet(last.sets);
   if (!best || best.weight <= 0) return null;
   if (best.reps >= REP_CEILING) {
     return { weight: Math.round((best.weight + WEIGHT_STEP_KG) * 10) / 10, reps: Math.max(6, REP_CEILING - 4), kind: "weight" };

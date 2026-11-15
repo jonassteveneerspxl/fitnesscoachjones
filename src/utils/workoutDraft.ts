@@ -20,13 +20,12 @@ export function draftKeyFor(uid?: string | null): string {
   return uid ? `${DRAFT_KEY}:${uid}` : DRAFT_KEY;
 }
 
-/** Kopieert alleen de bekende velden; `done` en `warmup` worden alleen bewaard als ze iets afwijkends zeggen. */
+/** Kopieert alleen de bekende velden; `done` wordt alleen bewaard als ze iets afwijkends zeggen. */
 function copySet(s: DraftSet): DraftSet {
   return {
     weight: s.weight,
     reps: s.reps,
     ...(s.done === false ? { done: false } : {}),
-    ...(s.warmup === true ? { warmup: true } : {}),
   };
 }
 
@@ -39,8 +38,6 @@ export interface DraftSet {
   reps: string;
   /** Alleen `false` wordt bewaard: een voorgestelde set (vorige keer) die nog niet is afgevinkt. */
   done?: boolean;
-  /** Opwarmset (telt niet mee voor volume en records). */
-  warmup?: boolean;
 }
 
 export interface DraftExercise {
