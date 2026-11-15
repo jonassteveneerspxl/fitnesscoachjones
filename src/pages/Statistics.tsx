@@ -334,7 +334,7 @@ const Statistics = () => {
             <>
               <ChartCard
                 title="Beste werkset (geschat 1RM)"
-                description="Per sessie de werkset met het hoogste geschatte 1RM. Opwarmsets tellen niet mee."
+                description="Per sessie de werkset met het hoogste geschatte 1RM."
                 isEmpty={progression.length === 0}
                 emptyMessage="Geen setgegevens voor deze oefening in deze selectie."
                 tableHeaders={["Datum", "Beste werkset", "Geschat 1RM (kg)"]}

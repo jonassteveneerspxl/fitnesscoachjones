@@ -39,8 +39,6 @@ export interface SessionExercise {
   exerciseName: string;
   /** Alleen geldige sets (eindig, gewicht ≥ 0, reps ≥ 1). */
   sets: SetLike[];
-  /** Aantal opwarmsets (tellen niet mee in `sets` en `stats`). */
-  warmupCount: number;
   stats: ExerciseSessionStats;
   hasSets: boolean;
 }
@@ -89,14 +87,11 @@ function toSessionExercise(raw: Workout["exercises"][number]): SessionExercise {
   const stats = summarizeExerciseSets(raw.sets);
   const isValid = (s: { weight: number; reps: number }) =>
     Number.isFinite(s.weight) && Number.isFinite(s.reps) && s.weight >= 0 && s.reps >= 1;
-  // Records en voortgang rekenen alleen met werksets; opwarmsets tellen we apart.
-  const valid = raw.sets.filter((s) => isValid(s) && s.isWarmup !== true);
-  const warmupCount = raw.sets.filter((s) => isValid(s) && s.isWarmup === true).length;
+  const valid = raw.sets.filter(isValid);
   return {
     exerciseKey: normalizeExerciseName(raw.exercise),
     exerciseName: raw.exercise.trim(),
     sets: valid,
-    warmupCount,
     stats,
     hasSets: stats.setCount > 0,
   };
@@ -326,7 +321,7 @@ export interface ProgressionPoint {
   exerciseVolume: number;
   best1RM: number;
   setCount: number;
-  /** Beste werkset van de sessie: de set met het hoogste geschatte 1RM (bij gelijkspel de zwaarste). Opwarmsets tellen niet. */
+  /** Beste werkset van de sessie: de set met het hoogste geschatte 1RM (bij gelijkspel de zwaarste).*/
   bestSet: { weight: number; reps: number } | null;
 }
 

@@ -99,10 +99,8 @@ export function WorkoutHistory({ workouts, onEdit, onDelete }: WorkoutHistoryPro
                     {exercise.sets.map((set, setIdx) => (
                       <span
                         key={setIdx}
-                        className={`px-2 py-0.5 rounded text-xs ${set.isWarmup ? "bg-muted/40 text-muted-foreground" : "bg-muted"}`}
-                        title={set.isWarmup ? "Opwarmset (telt niet mee)" : undefined}
+                        className="px-2 py-0.5 rounded text-xs bg-muted"
                       >
-                        {set.isWarmup && <span className="mr-1 font-medium">W</span>}
                         {set.weight}kg × {set.reps}
                       </span>
                     ))}

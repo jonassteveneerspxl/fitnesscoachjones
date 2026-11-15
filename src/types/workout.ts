@@ -20,7 +20,7 @@ export const SELECTABLE_TRAINING_TYPES: TrainingType[] = TRAINING_TYPES.filter(
 export interface SetLike {
   weight: number;
   reps: number;
-  /** Opwarmset: wordt getoond maar telt niet mee voor volume, 1RM, records en "vorige keer". Afwezig = werkset. */
+  /** Oud veld uit eerdere versies van de app. Wordt bewaard maar genegeerd: elke set telt mee. */
   isWarmup?: boolean;
 }
 

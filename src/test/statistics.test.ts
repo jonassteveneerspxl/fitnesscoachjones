@@ -400,7 +400,7 @@ describe("bestWorkSet en beste werkset per sessie", () => {
     expect(bestWorkSet([{ weight: 0, reps: 12 }])).toEqual({ weight: 0, reps: 12 });
   });
 
-  it("de progressie toont per sessie de beste werkset en negeert opwarmsets", () => {
+  it("de progressie toont per sessie de beste set; het oude opwarmveld wordt genegeerd", () => {
     const w = makeWorkout({
       id: "bw",
       startedAt: "2026-10-05T10:00:00.000Z",
@@ -417,7 +417,7 @@ describe("bestWorkSet en beste werkset per sessie", () => {
       ],
     });
     const points = exerciseProgression(buildSessions([w]).sessions, "bench press");
-    expect(points[0].bestSet).toEqual({ weight: 100, reps: 2 }); // de opwarmset van 150 telt niet
-    expect(points[0].best1RM).toBe(107);
+    expect(points[0].bestSet).toEqual({ weight: 150, reps: 1 }); // een oude opwarmmarkering telt gewoon mee
+    expect(points[0].best1RM).toBe(150);
   });
 });

@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { calculateVolumeFromSets, getBest1RMFromSets, suggestWarmups } from "@/utils/fitnessCalculations";
+import { calculateVolumeFromSets, getBest1RMFromSets } from "@/utils/fitnessCalculations";
 import { ExerciseSelector } from "@/components/ExerciseSelector";
 import { trainingTypeLabel } from "@/utils/trainingTypeLabel";
 import { WorkoutTemplateSelector } from "@/components/WorkoutTemplateSelector";
@@ -39,7 +39,6 @@ import { WorkoutTemplate } from "@/data/workoutTemplates";
 import { clearDraft, draftKeyFor, loadDraft, saveDraft } from "@/utils/workoutDraft";
 import { useOptionalAuth } from "@/context/AuthContext";
 import { getBrowserStorage } from "@/utils/workoutStorage";
-import { DEFAULT_REST_SECONDS, RestTimer } from "@/components/RestTimer";
 import { LastPerformance, findLastPerformance, findLastWorkout, suggestNextTarget } from "@/utils/lastPerformance";
 import { describeWorkoutMoment } from "@/utils/dates";
 
@@ -66,13 +65,13 @@ interface WorkoutFormProps {
 }
 
 /** `done: false` = voorgesteld (vorige keer) maar nog niet afgevinkt; zulke sets worden niet opgeslagen. */
-type FormSet = { weight: string; reps: string; done?: false | true; warmup?: boolean };
+type FormSet = { weight: string; reps: string; done?: false | true };
 
 const setsFromLast = (last: LastPerformance): FormSet[] =>
-  last.sets.map((s) => ({ weight: String(s.weight), reps: String(s.reps), done: false as const, ...(s.isWarmup ? { warmup: true } : {}) }));
+  last.sets.map((s) => ({ weight: String(s.weight), reps: String(s.reps), done: false as const }));
 
 const sameSets = (a: FormSet[], b: FormSet[]) =>
-  a.length === b.length && a.every((s, i) => s.weight === b[i].weight && s.reps === b[i].reps && !!s.warmup === !!b[i].warmup);
+  a.length === b.length && a.every((s, i) => s.weight === b[i].weight && s.reps === b[i].reps);
 
 const nlNumber = (n: number) => n.toLocaleString("nl-BE", { maximumFractionDigits: 1 });
 
@@ -86,7 +85,7 @@ const createEmptyExercise = (): ExerciseFormData => ({
 const createFormDataFromWorkout = (workout: Workout): ExerciseFormData[] =>
   workout.exercises.map((ex, index) => ({
     exercise: ex.exercise,
-    sets: ex.sets.map((s) => ({ weight: String(s.weight), reps: String(s.reps), ...(s.isWarmup ? { warmup: true } : {}) })),
+    sets: ex.sets.map((s) => ({ weight: String(s.weight), reps: String(s.reps) })),
     notes: ex.notes ?? "",
     isExpanded: index === 0,
   }));
@@ -119,7 +118,6 @@ export function WorkoutForm({
     initialWorkout ? initialWorkout.trainingType : (restoredDraft?.trainingType ?? "Custom")
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
 
   // Bewaar het lopende formulier bij elke wijziging. Een leeg formulier (na opslaan of weggooien) wist het concept.
   useEffect(() => {
@@ -242,30 +240,6 @@ export function WorkoutForm({
     }
   };
 
-  const toggleWarmup = (exerciseIndex: number, setIndex: number) => {
-    const updated = [...exercises];
-    const target = updated[exerciseIndex].sets[setIndex];
-    target.warmup = !target.warmup;
-    setExercises(updated);
-  };
-
-  /** Stelt de lichte sets vóór je zwaarste set voor als opwarming. Jij kunt elke set daarna nog aanpassen. */
-  const warmupSuggestion = (exercise: ExerciseFormData): boolean[] => {
-    if (exercise.sets.some((s) => s.warmup)) return [];
-    const flags = suggestWarmups(exercise.sets.map((s) => ({ weight: Number(s.weight), reps: Number(s.reps) })));
-    return flags.some(Boolean) ? flags : [];
-  };
-
-  const applyWarmupSuggestion = (exerciseIndex: number) => {
-    const updated = [...exercises];
-    const flags = warmupSuggestion(updated[exerciseIndex]);
-    updated[exerciseIndex] = {
-      ...updated[exerciseIndex],
-      sets: updated[exerciseIndex].sets.map((s, i) => (flags[i] ? { ...s, warmup: true } : s)),
-    };
-    setExercises(updated);
-  };
-
   const toggleSetDone = (exerciseIndex: number, setIndex: number) => {
     const updated = [...exercises];
     const target = updated[exerciseIndex].sets[setIndex];
@@ -273,7 +247,6 @@ export function WorkoutForm({
     target.done = nowDone ? true : false;
     setExercises(updated);
     // Een set afvinken start de rust. Alleen in een nieuwe workout, niet bij bewerken.
-    if (nowDone && !isEditing) setRestEndsAt(Date.now() + DEFAULT_REST_SECONDS * 1000);
   };
 
   const updateSet = (
@@ -294,7 +267,7 @@ export function WorkoutForm({
     if (!last) return null;
     const day = describeWorkoutMoment(last.startedAt, last.timeZone)?.split(" · ")[0];
     // Alleen afgevinkte of zelf ingevulde sets tellen mee; voorgestelde sets zijn nog niet gedaan.
-    const now = exercise.sets.filter((st) => st.done !== false && !st.warmup).filter(isValidSet).reduce((sum, st) => sum + Number(st.weight) * Number(st.reps), 0);
+    const now = exercise.sets.filter((st) => st.done !== false).filter(isValidSet).reduce((sum, st) => sum + Number(st.weight) * Number(st.reps), 0);
     const diff = now - last.volume;
     const lastSets = setsFromLast(last);
     return (
@@ -381,7 +354,6 @@ export function WorkoutForm({
           setNumber: index + 1,
           weight: Number(s.weight),
           reps: Number(s.reps),
-          ...(s.warmup ? { isWarmup: true } : {}),
         }));
 
         return {
@@ -414,7 +386,6 @@ export function WorkoutForm({
       setExercises([createEmptyExercise()]);
       setTrainingType("Custom");
       setDraftNoticeFrom(null);
-      setRestEndsAt(null);
       clearDraft(getBrowserStorage(), draftKey);
     }
   };
@@ -631,26 +602,12 @@ export function WorkoutForm({
                         const prev = lastFor(exercise.exercise)?.sets[setIndex];
                         return prev ? (
                           <p className="text-[11px] text-muted-foreground" data-testid="previous-set">
-                            Vorige: {prev.isWarmup ? "opwarmen " : ""}
-                            {nlNumber(prev.weight)} kg × {prev.reps}
+                            Vorige: {nlNumber(prev.weight)} kg × {prev.reps}
                           </p>
                         ) : (
                           <span />
                         );
                       })()}
-                      <button
-                        type="button"
-                        aria-pressed={!!set.warmup}
-                        aria-label={`Set ${setIndex + 1} opwarmset`}
-                        onClick={() => toggleWarmup(exIndex, setIndex)}
-                        className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
-                          set.warmup
-                            ? "border-primary bg-primary/20 text-primary"
-                            : "border-border text-muted-foreground hover:border-primary"
-                        }`}
-                      >
-                        Opwarmen
-                      </button>
                     </div>
                     </div>
                     {exercise.sets.length > 1 && (
@@ -674,17 +631,6 @@ export function WorkoutForm({
                   <Plus className="w-3 h-3 mr-1" />
                   Set toevoegen
                 </Button>
-                {warmupSuggestion(exercise).length > 0 && (
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    className="h-auto p-0 text-xs"
-                    onClick={() => applyWarmupSuggestion(exIndex)}
-                  >
-                    Lichte sets vooraf als opwarmen markeren
-                  </Button>
-                )}
               </div>
 
               {/* Notes */}
@@ -726,9 +672,6 @@ export function WorkoutForm({
         <Button type="button" variant="ghost" onClick={onCancel} className="w-full">
           Annuleren
         </Button>
-      )}
-      {restEndsAt !== null && !isEditing && (
-        <RestTimer endsAt={restEndsAt} onChange={setRestEndsAt} onClose={() => setRestEndsAt(null)} />
       )}
     </form>
   );

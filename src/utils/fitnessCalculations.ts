@@ -7,9 +7,12 @@ export function calculate1RM(weight: number, reps: number): number {
   return Math.round(weight * (1 + reps / 30));
 }
 
-/** Werksets: alles behalve opwarmsets. Volume, 1RM en records rekenen alleen met deze sets. */
+/**
+ * Alle sets tellen mee. Het oude veld `isWarmup` in opgeslagen trainingen wordt bewust genegeerd:
+ * ook een lichte set is gewicht dat je bewogen hebt.
+ */
 export function workSets<T extends SetLike>(sets: T[]): T[] {
-  return sets.filter((set) => set.isWarmup !== true);
+  return sets;
 }
 
 export function calculateVolumeFromSets(sets: SetLike[]): number {
@@ -20,18 +23,6 @@ export function getBest1RMFromSets(sets: SetLike[]): number {
   const work = workSets(sets);
   if (work.length === 0) return 0;
   return Math.max(...work.map((set) => calculate1RM(set.weight, set.reps)));
-}
-
-/**
- * Stelt voor welke sets opwarmsets zijn: de lichte sets (minder dan 80% van je zwaarste gewicht) die vóór je
- * zwaarste set komen. Alleen een voorstel; jij beslist. Geeft per set `true` (opwarmen) of `false`.
- */
-export function suggestWarmups(sets: { weight: number; reps: number }[]): boolean[] {
-  const valid = sets.map((s) => Number.isFinite(s.weight) && Number.isFinite(s.reps) && s.weight >= 0 && s.reps >= 1);
-  const top = Math.max(0, ...sets.filter((_, i) => valid[i]).map((s) => s.weight));
-  if (top <= 0) return sets.map(() => false);
-  const firstTop = sets.findIndex((s, i) => valid[i] && s.weight === top);
-  return sets.map((s, i) => valid[i] && i < firstTop && s.weight < top * 0.8);
 }
 
 export const PR_LABELS: Record<PRType, string> = {
