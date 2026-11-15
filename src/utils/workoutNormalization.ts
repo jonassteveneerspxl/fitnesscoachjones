@@ -54,7 +54,7 @@ function normalizeSets(raw: unknown, label: string, issues: string[]): SetData[]
       while (used.has(setNumber)) setNumber++;
     }
     used.add(setNumber);
-    sets.push({ setNumber, weight: s.weight, reps: s.reps });
+    sets.push(s.isWarmup === true ? { setNumber, weight: s.weight, reps: s.reps, isWarmup: true } : { setNumber, weight: s.weight, reps: s.reps });
   });
   return sets;
 }

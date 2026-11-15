@@ -39,5 +39,24 @@ service cloud.firestore {
 
       allow delete: if false;
     }
+
+    // Eigen oefeningen (aanvullingen op de ingebouwde lijst). Workouts bewaren alleen de naam, dus deze
+    // mogen gewoon verwijderd worden zonder dat er trainingsdata verloren gaat.
+    function validExercise(exerciseId) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['id', 'name', 'muscleGroup', 'pplCategory', 'createdAt'])
+        && d.keys().hasOnly(['id', 'name', 'muscleGroup', 'pplCategory', 'equipment', 'createdAt'])
+        && d.id == exerciseId
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 60
+        && d.muscleGroup in ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'forearms', 'quadriceps', 'hamstrings', 'glutes', 'calves', 'core']
+        && d.pplCategory in ['push', 'pull', 'legs']
+        && (!('equipment' in d) || (d.equipment is string && d.equipment.size() <= 40));
+    }
+
+    match /users/{uid}/exercises/{exerciseId} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validExercise(exerciseId);
+      allow delete: if isOwner(uid);
+    }
   }
 }

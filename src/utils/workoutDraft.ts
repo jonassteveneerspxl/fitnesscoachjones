@@ -20,6 +20,16 @@ export function draftKeyFor(uid?: string | null): string {
   return uid ? `${DRAFT_KEY}:${uid}` : DRAFT_KEY;
 }
 
+/** Kopieert alleen de bekende velden; `done` en `warmup` worden alleen bewaard als ze iets afwijkends zeggen. */
+function copySet(s: DraftSet): DraftSet {
+  return {
+    weight: s.weight,
+    reps: s.reps,
+    ...(s.done === false ? { done: false } : {}),
+    ...(s.warmup === true ? { warmup: true } : {}),
+  };
+}
+
 const MAX_EXERCISES = 50;
 const MAX_SETS = 50;
 const MAX_TEXT = 5000;
@@ -29,6 +39,8 @@ export interface DraftSet {
   reps: string;
   /** Alleen `false` wordt bewaard: een voorgestelde set (vorige keer) die nog niet is afgevinkt. */
   done?: boolean;
+  /** Opwarmset (telt niet mee voor volume en records). */
+  warmup?: boolean;
 }
 
 export interface DraftExercise {
@@ -69,7 +81,7 @@ function parseExercise(raw: unknown): DraftExercise | null {
   const sets: DraftSet[] = [];
   for (const s of raw.sets) {
     if (!isRecord(s) || !isText(s.weight) || !isText(s.reps)) return null;
-    sets.push(s.done === false ? { weight: s.weight, reps: s.reps, done: false } : { weight: s.weight, reps: s.reps });
+    sets.push(copySet(s as unknown as DraftSet));
   }
   return {
     exercise: raw.exercise,
@@ -142,7 +154,7 @@ export function saveDraft(
       trainingType,
       exercises: exercises.map((ex) => ({
         exercise: ex.exercise,
-        sets: ex.sets.map((s) => (s.done === false ? { weight: s.weight, reps: s.reps, done: false as const } : { weight: s.weight, reps: s.reps })),
+        sets: ex.sets.map(copySet),
         notes: ex.notes,
         isExpanded: ex.isExpanded,
       })),

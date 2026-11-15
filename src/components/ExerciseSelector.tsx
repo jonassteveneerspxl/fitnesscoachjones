@@ -11,16 +11,26 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  exercises,
   muscleGroupLabels,
   pplLabels,
-  searchExercises,
-  getExercisesByMuscleGroup,
-  getExercisesByPPL,
   type MuscleGroup,
   type PPLCategory,
   type Exercise,
 } from "@/data/exercises";
+import { useExerciseCatalog } from "@/context/ExerciseCatalogContext";
+import { AddExerciseDialog } from "@/components/AddExerciseDialog";
+import { searchIn } from "@/utils/customExercises";
+import { Plus, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 interface ExerciseSelectorProps {
@@ -39,19 +49,33 @@ export function ExerciseSelector({
   const [activeTab, setActiveTab] = useState<"search" | "muscle" | "ppl">("search");
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup | null>(null);
   const [selectedPPL, setSelectedPPL] = useState<PPLCategory | null>(null);
+  const catalog = useExerciseCatalog();
+  const exercises = catalog.all;
+  const [addOpen, setAddOpen] = useState(false);
+  const [addName, setAddName] = useState("");
+  const [pendingRemove, setPendingRemove] = useState<Exercise | null>(null);
+  const byMuscle = (m: MuscleGroup) => exercises.filter((e) => e.muscleGroup === m);
+  const byPpl = (c: PPLCategory) => exercises.filter((e) => e.pplCategory === c);
+  const customIds = useMemo(() => new Map(catalog.custom.map((c) => [c.name, c.id])), [catalog.custom]);
 
   const filteredExercises = useMemo(() => {
     if (activeTab === "search" && searchQuery) {
-      return searchExercises(searchQuery);
+      return searchIn(exercises, searchQuery);
     }
     if (activeTab === "muscle" && selectedMuscle) {
-      return getExercisesByMuscleGroup(selectedMuscle);
+      return exercises.filter((e) => e.muscleGroup === selectedMuscle);
     }
     if (activeTab === "ppl" && selectedPPL) {
-      return getExercisesByPPL(selectedPPL);
+      return exercises.filter((e) => e.pplCategory === selectedPPL);
     }
     return [];
-  }, [activeTab, searchQuery, selectedMuscle, selectedPPL]);
+  }, [exercises, activeTab, searchQuery, selectedMuscle, selectedPPL]);
+
+  const openAdd = (name = "") => {
+    setAddName(name);
+    setOpen(false);
+    setAddOpen(true);
+  };
 
   const handleSelect = (exerciseName: string) => {
     onChange(exerciseName);
@@ -64,6 +88,7 @@ export function ExerciseSelector({
   const selectedExercise = exercises.find((e) => e.name === value);
 
   return (
+    <>
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
@@ -114,12 +139,19 @@ export function ExerciseSelector({
                         exercise={exercise}
                         isSelected={value === exercise.name}
                         onSelect={handleSelect}
+                        onRemove={customIds.has(exercise.name) ? setPendingRemove : undefined}
                       />
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    Geen oefeningen gevonden
+                  <div className="p-4 text-center text-sm text-muted-foreground space-y-2">
+                    <p>Geen oefeningen gevonden</p>
+                    {catalog.canAdd && (
+                      <Button type="button" variant="outline" size="sm" onClick={() => openAdd(searchQuery)}>
+                        <Plus className="h-3 w-3 mr-1" />
+                        "{searchQuery}" toevoegen
+                      </Button>
+                    )}
                   </div>
                 )
               ) : (
@@ -144,7 +176,7 @@ export function ExerciseSelector({
                     >
                       {muscleGroupLabels[muscle]}
                       <Badge variant="secondary" className="ml-auto text-xs">
-                        {getExercisesByMuscleGroup(muscle).length}
+                        {byMuscle(muscle).length}
                       </Badge>
                     </Button>
                   ))}
@@ -171,6 +203,7 @@ export function ExerciseSelector({
                         exercise={exercise}
                         isSelected={value === exercise.name}
                         onSelect={handleSelect}
+                        onRemove={customIds.has(exercise.name) ? setPendingRemove : undefined}
                       />
                     ))}
                   </div>
@@ -196,7 +229,7 @@ export function ExerciseSelector({
                   >
                     <span className="font-medium">{pplLabels[ppl]}</span>
                     <Badge variant="secondary">
-                      {getExercisesByPPL(ppl).length} oefeningen
+                      {byPpl(ppl).length} oefeningen
                     </Badge>
                   </Button>
                 ))}
@@ -222,6 +255,7 @@ export function ExerciseSelector({
                         exercise={exercise}
                         isSelected={value === exercise.name}
                         onSelect={handleSelect}
+                        onRemove={customIds.has(exercise.name) ? setPendingRemove : undefined}
                       />
                     ))}
                   </div>
@@ -230,8 +264,48 @@ export function ExerciseSelector({
             )}
           </TabsContent>
         </Tabs>
+        {catalog.canAdd && (
+          <div className="border-t p-2">
+            <Button type="button" variant="ghost" size="sm" className="w-full justify-start text-xs" onClick={() => openAdd(searchQuery)}>
+              <Plus className="h-3 w-3 mr-1" />
+              Eigen oefening toevoegen
+            </Button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
+    <AddExerciseDialog
+      open={addOpen}
+      onOpenChange={setAddOpen}
+      initialName={addName}
+      onAdded={(name) => {
+        onChange(name);
+        setSearchQuery("");
+      }}
+    />
+    <AlertDialog open={!!pendingRemove} onOpenChange={(o) => !o && setPendingRemove(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Oefening uit je lijst halen?</AlertDialogTitle>
+          <AlertDialogDescription>
+            "{pendingRemove?.name}" verdwijnt uit je oefeninglijst. Je opgeslagen workouts blijven ongewijzigd.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Annuleren</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              const id = pendingRemove ? customIds.get(pendingRemove.name) : undefined;
+              if (id) catalog.removeExercise(id);
+              setPendingRemove(null);
+            }}
+          >
+            Verwijderen
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
@@ -239,16 +313,21 @@ function ExerciseItem({
   exercise,
   isSelected,
   onSelect,
+  onRemove,
 }: {
   exercise: Exercise;
   isSelected: boolean;
   onSelect: (name: string) => void;
+  /** Alleen voor eigen oefeningen. */
+  onRemove?: (exercise: Exercise) => void;
 }) {
   return (
+    <div className="flex items-center gap-1">
     <button
+      type="button"
       onClick={() => onSelect(exercise.name)}
       className={cn(
-        "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-left transition-colors",
+        "flex-1 min-w-0 flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-left transition-colors",
         isSelected
           ? "bg-primary text-primary-foreground"
           : "hover:bg-muted"
@@ -270,8 +349,25 @@ function ExerciseItem({
               <span>{exercise.equipment}</span>
             </>
           )}
+          {onRemove && (
+            <>
+              <span>•</span>
+              <span>Eigen</span>
+            </>
+          )}
         </div>
       </div>
     </button>
+    {onRemove && (
+      <button
+        type="button"
+        aria-label={`${exercise.name} uit je lijst halen`}
+        onClick={() => onRemove(exercise)}
+        className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+    )}
+    </div>
   );
 }

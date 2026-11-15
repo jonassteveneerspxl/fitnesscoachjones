@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { calculateVolumeFromSets, getBest1RMFromSets } from "@/utils/fitnessCalculations";
+import { calculateVolumeFromSets, getBest1RMFromSets, suggestWarmups } from "@/utils/fitnessCalculations";
 import { ExerciseSelector } from "@/components/ExerciseSelector";
 import { WorkoutTemplateSelector } from "@/components/WorkoutTemplateSelector";
 import { WorkoutTemplate } from "@/data/workoutTemplates";
@@ -65,13 +65,13 @@ interface WorkoutFormProps {
 }
 
 /** `done: false` = voorgesteld (vorige keer) maar nog niet afgevinkt; zulke sets worden niet opgeslagen. */
-type FormSet = { weight: string; reps: string; done?: false | true };
+type FormSet = { weight: string; reps: string; done?: false | true; warmup?: boolean };
 
 const setsFromLast = (last: LastPerformance): FormSet[] =>
-  last.sets.map((s) => ({ weight: String(s.weight), reps: String(s.reps), done: false as const }));
+  last.sets.map((s) => ({ weight: String(s.weight), reps: String(s.reps), done: false as const, ...(s.isWarmup ? { warmup: true } : {}) }));
 
 const sameSets = (a: FormSet[], b: FormSet[]) =>
-  a.length === b.length && a.every((s, i) => s.weight === b[i].weight && s.reps === b[i].reps);
+  a.length === b.length && a.every((s, i) => s.weight === b[i].weight && s.reps === b[i].reps && !!s.warmup === !!b[i].warmup);
 
 const nlNumber = (n: number) => n.toLocaleString("nl-BE", { maximumFractionDigits: 1 });
 
@@ -85,7 +85,7 @@ const createEmptyExercise = (): ExerciseFormData => ({
 const createFormDataFromWorkout = (workout: Workout): ExerciseFormData[] =>
   workout.exercises.map((ex, index) => ({
     exercise: ex.exercise,
-    sets: ex.sets.map((s) => ({ weight: String(s.weight), reps: String(s.reps) })),
+    sets: ex.sets.map((s) => ({ weight: String(s.weight), reps: String(s.reps), ...(s.isWarmup ? { warmup: true } : {}) })),
     notes: ex.notes ?? "",
     isExpanded: index === 0,
   }));
@@ -241,6 +241,30 @@ export function WorkoutForm({
     }
   };
 
+  const toggleWarmup = (exerciseIndex: number, setIndex: number) => {
+    const updated = [...exercises];
+    const target = updated[exerciseIndex].sets[setIndex];
+    target.warmup = !target.warmup;
+    setExercises(updated);
+  };
+
+  /** Stelt de lichte sets vóór je zwaarste set voor als opwarming. Jij kunt elke set daarna nog aanpassen. */
+  const warmupSuggestion = (exercise: ExerciseFormData): boolean[] => {
+    if (exercise.sets.some((s) => s.warmup)) return [];
+    const flags = suggestWarmups(exercise.sets.map((s) => ({ weight: Number(s.weight), reps: Number(s.reps) })));
+    return flags.some(Boolean) ? flags : [];
+  };
+
+  const applyWarmupSuggestion = (exerciseIndex: number) => {
+    const updated = [...exercises];
+    const flags = warmupSuggestion(updated[exerciseIndex]);
+    updated[exerciseIndex] = {
+      ...updated[exerciseIndex],
+      sets: updated[exerciseIndex].sets.map((s, i) => (flags[i] ? { ...s, warmup: true } : s)),
+    };
+    setExercises(updated);
+  };
+
   const toggleSetDone = (exerciseIndex: number, setIndex: number) => {
     const updated = [...exercises];
     const target = updated[exerciseIndex].sets[setIndex];
@@ -269,7 +293,7 @@ export function WorkoutForm({
     if (!last) return null;
     const day = describeWorkoutMoment(last.startedAt, last.timeZone)?.split(" · ")[0];
     // Alleen afgevinkte of zelf ingevulde sets tellen mee; voorgestelde sets zijn nog niet gedaan.
-    const now = exercise.sets.filter((st) => st.done !== false).filter(isValidSet).reduce((sum, st) => sum + Number(st.weight) * Number(st.reps), 0);
+    const now = exercise.sets.filter((st) => st.done !== false && !st.warmup).filter(isValidSet).reduce((sum, st) => sum + Number(st.weight) * Number(st.reps), 0);
     const diff = now - last.volume;
     const lastSets = setsFromLast(last);
     return (
@@ -345,6 +369,7 @@ export function WorkoutForm({
           setNumber: index + 1,
           weight: Number(s.weight),
           reps: Number(s.reps),
+          ...(s.warmup ? { isWarmup: true } : {}),
         }));
 
         return {
@@ -589,14 +614,32 @@ export function WorkoutForm({
                         </span>
                       </div>
                     </div>
-                    {(() => {
-                      const prev = lastFor(exercise.exercise)?.sets[setIndex];
-                      return prev ? (
-                        <p className="mt-0.5 text-[11px] text-muted-foreground" data-testid="previous-set">
-                          Vorige: {nlNumber(prev.weight)} kg × {prev.reps}
-                        </p>
-                      ) : null;
-                    })()}
+                    <div className="mt-0.5 flex items-center justify-between gap-2">
+                      {(() => {
+                        const prev = lastFor(exercise.exercise)?.sets[setIndex];
+                        return prev ? (
+                          <p className="text-[11px] text-muted-foreground" data-testid="previous-set">
+                            Vorige: {prev.isWarmup ? "opwarmen " : ""}
+                            {nlNumber(prev.weight)} kg × {prev.reps}
+                          </p>
+                        ) : (
+                          <span />
+                        );
+                      })()}
+                      <button
+                        type="button"
+                        aria-pressed={!!set.warmup}
+                        aria-label={`Set ${setIndex + 1} opwarmset`}
+                        onClick={() => toggleWarmup(exIndex, setIndex)}
+                        className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
+                          set.warmup
+                            ? "border-primary bg-primary/20 text-primary"
+                            : "border-border text-muted-foreground hover:border-primary"
+                        }`}
+                      >
+                        Opwarmen
+                      </button>
+                    </div>
                     </div>
                     {exercise.sets.length > 1 && (
                       <button
@@ -619,6 +662,17 @@ export function WorkoutForm({
                   <Plus className="w-3 h-3 mr-1" />
                   Set toevoegen
                 </Button>
+                {warmupSuggestion(exercise).length > 0 && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-xs"
+                    onClick={() => applyWarmupSuggestion(exIndex)}
+                  >
+                    Lichte sets vooraf als opwarmen markeren
+                  </Button>
+                )}
               </div>
 
               {/* Notes */}
