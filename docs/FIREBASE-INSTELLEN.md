@@ -24,6 +24,11 @@ Test in de **Rules Playground** (die kan ik vanuit mijn omgeving niet uitvoeren)
 - Zelfde pad ingelogd als een andere uid, of niet ingelogd → geweigerd.
 - Verwijderen (delete) → altijd geweigerd.
 
+### Bijgewerkte regels (eigen oefeningen)
+Sinds de functie "Eigen oefening toevoegen" bevat `firestore.rules` ook een blok voor `users/{uid}/exercises`.
+**Publiceer de regels opnieuw** (plak het hele bestand en klik Publish), anders krijg je bij het toevoegen de melding
+"Geen toegang tot je eigen oefeningen". Je workouts blijven gewoon werken.
+
 ## 4. Controle op je telefoon
 1. Open de site, registreer of log in met Google.
 2. Log een workout, sluit de browser helemaal, open opnieuw → de workout staat er nog.
