@@ -39,6 +39,13 @@ function Probe() {
   return <div>{isLoading ? "laden" : `aantal:${workouts.length}`}<UserMenu /></div>;
 }
 
+async function signOutViaMenu() {
+  const trigger = screen.getByRole("button", { name: "Account" });
+  fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
+  fireEvent.keyDown(trigger, { key: "Enter" });
+  fireEvent.click(await screen.findByRole("menuitem", { name: /uitloggen/i }));
+}
+
 function setup(auth: FakeAuth, backends: Record<string, FakeBackend>) {
   return render(
     <MemoryRouter>
@@ -84,7 +91,7 @@ describe("inloggen en eigen gegevens", () => {
     const backends = { u1: new FakeBackend() };
     setup(auth, backends);
     await screen.findByText("aantal:0");
-    fireEvent.click(screen.getByRole("button", { name: /uitloggen/i }));
+    await signOutViaMenu();
     expect(await screen.findByRole("button", { name: /doorgaan met google/i })).toBeTruthy();
     expect(backends.u1.stopped).toBeGreaterThan(0);
     expect(backends.u1.flushCalls.length).toBe(1);
@@ -97,12 +104,12 @@ describe("inloggen en eigen gegevens", () => {
     backend.flushResult = false;
     setup(auth, { u1: backend });
     await screen.findByText("aantal:0");
-    fireEvent.click(screen.getByRole("button", { name: /uitloggen/i }));
+    await signOutViaMenu();
     expect(await screen.findByText("Nog niet alles is opgeslagen")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Blijven" }));
     await waitFor(() => expect(screen.queryByText("Nog niet alles is opgeslagen")).toBeNull());
     expect(auth.user).not.toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /uitloggen/i }));
+    await signOutViaMenu();
     fireEvent.click(await screen.findByRole("button", { name: "Toch uitloggen" }));
     expect(await screen.findByRole("button", { name: /doorgaan met google/i })).toBeTruthy();
   });

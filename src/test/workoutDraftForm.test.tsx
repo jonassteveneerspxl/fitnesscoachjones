@@ -104,7 +104,7 @@ describe("concept bewaren tijdens het invullen", () => {
 
   it("bewaart ook een geladen template", () => {
     const a = renderForm();
-    fireEvent.click(screen.getByRole("button", { name: /kies workout template/i }));
+    fireEvent.click(screen.getByRole("button", { name: /kies een schema/i }));
     return waitFor(() => screen.getByRole("button", { name: /push day - beginner/i })).then((btn) => {
       fireEvent.click(btn);
       a.unmount();
@@ -120,7 +120,7 @@ describe("concept opruimen", () => {
     renderForm();
     fillInProgress();
     typePlaceholder("Reps", "5", 1);
-    fireEvent.click(screen.getByRole("button", { name: /workout opslaan/i }));
+    fireEvent.click(screen.getByRole("button", { name: /training opslaan/i }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(localStorage.getItem(DRAFT_KEY)).toBeNull());
     expect((screen.getByLabelText("Oefening") as HTMLInputElement).value).toBe("");
@@ -131,7 +131,7 @@ describe("concept opruimen", () => {
     renderForm();
     fillInProgress();
     typePlaceholder("Reps", "5", 1);
-    fireEvent.click(screen.getByRole("button", { name: /workout opslaan/i }));
+    fireEvent.click(screen.getByRole("button", { name: /training opslaan/i }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect((screen.getByLabelText("Oefening") as HTMLInputElement).value).toBe("Bench Press");
     expect(loadDraft(localStorage)?.exercises[0].exercise).toBe("Bench Press");
@@ -237,12 +237,12 @@ describe("echte opslagflow via de pagina", () => {
         <Index />
       </MemoryRouter>
     );
-    await waitFor(() => expect(screen.getByRole("button", { name: /workout opslaan/i })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: /training opslaan/i })).toBeEnabled());
     fillInProgress();
     typePlaceholder("Reps", "5", 1);
     expect(loadDraft(localStorage)).not.toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: /workout opslaan/i }));
+    fireEvent.click(screen.getByRole("button", { name: /training opslaan/i }));
     await waitFor(() => expect(JSON.parse(localStorage.getItem(STORAGE_KEY_V2) ?? "{}").workouts?.length).toBe(1));
     await waitFor(() => expect(localStorage.getItem(DRAFT_KEY)).toBeNull());
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_V2)!).workouts[0];
@@ -264,11 +264,11 @@ describe("echte opslagflow via de pagina", () => {
         <Index />
       </MemoryRouter>
     );
-    await waitFor(() => expect(screen.getByRole("button", { name: /workout opslaan/i })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: /training opslaan/i })).toBeEnabled());
     fillInProgress();
     typePlaceholder("Reps", "5", 1);
-    fireEvent.click(screen.getByRole("button", { name: /workout opslaan/i }));
-    await waitFor(() => expect(screen.getByRole("button", { name: /workout opslaan/i })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: /training opslaan/i }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /training opslaan/i })).toBeEnabled());
     await new Promise((r) => setTimeout(r, 100));
     expect(loadDraft(localStorage)?.exercises[0].exercise).toBe("Bench Press");
     expect((screen.getByLabelText("Oefening") as HTMLInputElement).value).toBe("Bench Press");

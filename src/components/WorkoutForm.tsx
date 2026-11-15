@@ -33,6 +33,7 @@ import {
 import { toast } from "sonner";
 import { calculateVolumeFromSets, getBest1RMFromSets, suggestWarmups } from "@/utils/fitnessCalculations";
 import { ExerciseSelector } from "@/components/ExerciseSelector";
+import { trainingTypeLabel } from "@/utils/trainingTypeLabel";
 import { WorkoutTemplateSelector } from "@/components/WorkoutTemplateSelector";
 import { WorkoutTemplate } from "@/data/workoutTemplates";
 import { clearDraft, draftKeyFor, loadDraft, saveDraft } from "@/utils/workoutDraft";
@@ -476,10 +477,10 @@ export function WorkoutForm({
           <span className="font-semibold">
             {trainingType === "Custom" || trainingType === "Onbekend"
               ? "Zelfde als laatste workout"
-              : `Zelfde als vorige ${trainingType}`}
+              : `Zelfde als vorige ${trainingTypeLabel(trainingType)}`}
           </span>
           <span className="text-xs font-normal text-muted-foreground">
-            {quickStartTarget.trainingType !== "Onbekend" ? `${quickStartTarget.trainingType} · ` : ""}
+            {quickStartTarget.trainingType !== "Onbekend" ? `${trainingTypeLabel(quickStartTarget.trainingType)} · ` : ""}
             {describeWorkoutMoment(quickStartTarget.startedAt, quickStartTarget.timeZone)?.split(" · ")[0]} ·{" "}
             {quickStartTarget.exercises.length} oefening{quickStartTarget.exercises.length === 1 ? "" : "en"}
           </span>
@@ -503,7 +504,7 @@ export function WorkoutForm({
               : SELECTABLE_TRAINING_TYPES
             ).map((type) => (
               <SelectItem key={type} value={type}>
-                {type}
+                {trainingTypeLabel(type)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -719,7 +720,7 @@ export function WorkoutForm({
         className="w-full gradient-primary text-primary-foreground font-semibold py-6 text-lg hover:opacity-90 transition-opacity"
       >
         <Dumbbell className="w-5 h-5 mr-2" />
-        {submitLabel ?? "Workout Opslaan"}
+        {submitLabel ?? "Training opslaan"}
       </Button>
       {onCancel && (
         <Button type="button" variant="ghost" onClick={onCancel} className="w-full">
