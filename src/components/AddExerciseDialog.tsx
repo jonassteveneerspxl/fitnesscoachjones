@@ -14,12 +14,15 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   /** Voorgestelde naam, bv. wat je net in het zoekveld typte. */
   initialName?: string;
+  /** Voorgekozen soort, bv. "cardio" vanuit het cardioblok. */
+  defaultKind?: "strength" | "time" | "cardio";
   onAdded: (name: string) => void;
 }
 
-export function AddExerciseDialog({ open, onOpenChange, initialName = "", onAdded }: Props) {
+export function AddExerciseDialog({ open, onOpenChange, initialName = "", defaultKind = "strength", onAdded }: Props) {
   const { addExercise } = useExerciseCatalog();
   const [name, setName] = useState(initialName);
+  const [kind, setKind] = useState<"strength" | "time" | "cardio">(defaultKind);
   const [muscle, setMuscle] = useState<MuscleGroup | "">("");
   const [equipment, setEquipment] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -27,16 +30,17 @@ export function AddExerciseDialog({ open, onOpenChange, initialName = "", onAdde
   useEffect(() => {
     if (open) {
       setName(initialName);
+      setKind(defaultKind);
       setMuscle("");
       setEquipment("");
       setError(null);
     }
-  }, [open, initialName]);
+  }, [open, initialName, defaultKind]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     e.stopPropagation(); // dit formulier staat in een dialog binnen het workoutformulier
-    const result = addExercise({ name, muscleGroup: muscle, equipment });
+    const result = addExercise({ name, kind, muscleGroup: muscle, equipment });
     if (!result.ok || !result.exercise) {
       setError(result.message ?? "Toevoegen is mislukt.");
       return;
@@ -59,6 +63,20 @@ export function AddExerciseDialog({ open, onOpenChange, initialName = "", onAdde
             <Input id="ex-name" value={name} maxLength={MAX_NAME} onChange={(e) => setName(e.target.value)} placeholder="Bijv. Pec Deck Fly" autoComplete="off" />
           </div>
           <div className="space-y-1.5">
+            <Label>Soort</Label>
+            <Select value={kind} onValueChange={(v) => setKind(v as "strength" | "time" | "cardio")}>
+              <SelectTrigger aria-label="Soort oefening">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="strength">Kracht (gewicht en herhalingen)</SelectItem>
+                <SelectItem value="time">Houden (tijd, bv. plank of L-sit)</SelectItem>
+                <SelectItem value="cardio">Cardio (afstand en tijd)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {kind !== "cardio" && (
+          <div className="space-y-1.5">
             <Label>Spiergroep</Label>
             <Select value={muscle} onValueChange={(v) => setMuscle(v as MuscleGroup)}>
               <SelectTrigger aria-label="Spiergroep">
@@ -73,6 +91,7 @@ export function AddExerciseDialog({ open, onOpenChange, initialName = "", onAdde
               </SelectContent>
             </Select>
           </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="ex-equipment">Apparaat (optioneel)</Label>
             <Input id="ex-equipment" value={equipment} maxLength={MAX_EQUIPMENT} onChange={(e) => setEquipment(e.target.value)} placeholder="Bijv. Machine, Kabel, Barbell" autoComplete="off" />

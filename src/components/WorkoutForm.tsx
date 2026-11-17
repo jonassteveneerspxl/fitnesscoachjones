@@ -41,6 +41,7 @@ import { useOptionalAuth } from "@/context/AuthContext";
 import { getBrowserStorage } from "@/utils/workoutStorage";
 import { LastPerformance, findLastPerformance, findLastWorkout, suggestNextTarget } from "@/utils/lastPerformance";
 import { describeWorkoutMoment } from "@/utils/dates";
+import { useExerciseCatalog } from "@/context/ExerciseCatalogContext";
 import { CardioEditor, TimeSetsEditor } from "@/components/TimeAndCardioInputs";
 import { exerciseKindOf, formatDuration } from "@/utils/cardio";
 import {
@@ -52,7 +53,6 @@ import {
   isCardioValid,
   isTimeSetFilled,
   isTimeSetValid,
-  suggestKind,
 } from "@/utils/exerciseForm";
 import type { ExerciseKind } from "@/types/workout";
 
@@ -144,6 +144,7 @@ export function WorkoutForm({
   history = [],
 }: WorkoutFormProps) {
   const isEditing = !!initialWorkout;
+  const catalog = useExerciseCatalog();
   const lastFor = (name: string): LastPerformance | null => (isEditing ? null : findLastPerformance(history, name));
   const draftKey = draftKeyFor(useOptionalAuth()?.user?.uid);
   // Het concept van een lopende nieuwe workout wordt één keer gelezen bij het openen van het formulier, vóór de
@@ -269,7 +270,14 @@ export function WorkoutForm({
     if (lastNew && (untouched || isOldPrefill)) sets = setsFromLast(lastNew);
     else if (isOldPrefill) sets = [{ weight: "", reps: "" }];
     const updated = [...exercises];
-    const suggested = untouched && exerciseKindOf(current) !== "cardio" ? suggestKind(value) : exerciseKindOf(current);
+    const picked = catalog.kindOf(value);
+    if (picked === "cardio") {
+      // Een eigen cardio-oefening gekozen in de oefeninglijst: dit blok wordt een cardioblok met die soort.
+      updated[index] = { ...current, exercise: "", kind: "cardio", cardio: { ...(current.cardio ?? emptyCardio()), activity: value }, sets: [{ weight: "", reps: "" }] };
+      setExercises(updated);
+      return;
+    }
+    const suggested = untouched && exerciseKindOf(current) !== "cardio" ? picked : exerciseKindOf(current);
     updated[index] = { ...current, exercise: value, sets, ...(suggested !== exerciseKindOf(current) ? { kind: suggested } : {}) };
     setExercises(updated);
   };
