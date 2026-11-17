@@ -53,6 +53,8 @@ export interface DraftExercise {
   exercise: string;
   kind?: ExerciseKind;
   cardio?: DraftCardio;
+  /** Alleen `false` wordt bewaard: cardio-voorstel van vorige keer dat nog niet bevestigd is. */
+  cardioDone?: boolean;
   sets: DraftSet[];
   notes: string;
   isExpanded: boolean;
@@ -105,6 +107,7 @@ function parseExercise(raw: unknown): DraftExercise | null {
     exercise: raw.exercise,
     ...(kind ? { kind } : {}),
     ...(cardio ? { cardio } : {}),
+    ...(cardio && raw.cardioDone === false ? { cardioDone: false as const } : {}),
     sets,
     // Een te lange notitie wordt ingekort in plaats van het hele concept te weigeren: de sets gaan voor.
     notes: typeof raw.notes === "string" ? raw.notes.slice(0, MAX_TEXT) : "",
@@ -176,6 +179,7 @@ export function saveDraft(
         exercise: ex.exercise,
         ...(ex.kind && ex.kind !== "strength" ? { kind: ex.kind } : {}),
         ...(ex.cardio ? { cardio: { ...ex.cardio } } : {}),
+        ...(ex.cardio && ex.cardioDone === false ? { cardioDone: false as const } : {}),
         sets: ex.sets.map(copySet),
         notes: ex.notes,
         isExpanded: ex.isExpanded,

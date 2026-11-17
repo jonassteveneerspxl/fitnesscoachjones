@@ -1,3 +1,4 @@
+import { Activity } from "lucide-react";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -61,6 +62,8 @@ interface ExerciseFormData {
   /** Afwezig = kracht (gewicht × herhalingen). */
   kind?: ExerciseKind;
   cardio?: CardioForm;
+  /** `false` = voorstel van vorige keer (nog niet bevestigd); wordt dan niet opgeslagen. Aanpassen of bevestigen maakt het `true`. */
+  cardioDone?: boolean;
   sets: FormSet[];
   notes: string;
   isExpanded: boolean;
@@ -180,6 +183,13 @@ export function WorkoutForm({
   };
 
   const addExercise = () => {
+    // Is de laatste oefening nog leeg, dan openen we die in plaats van nog een lege toe te voegen.
+    const lastIdx = exercises.length - 1;
+    const last = exercises[lastIdx];
+    if (last && exerciseKindOf(last) !== "cardio" && !last.exercise.trim() && !last.notes.trim() && !last.sets.some(isFilled) && !last.sets.some(isTimeSetFilled)) {
+      setExercises(exercises.map((ex, i) => ({ ...ex, isExpanded: i === lastIdx })));
+      return;
+    }
     // Collapse all other exercises
     const updated = exercises.map((ex) => ({ ...ex, isExpanded: false }));
     setExercises([...updated, createEmptyExercise()]);
@@ -217,8 +227,7 @@ export function WorkoutForm({
           // Tijd en cardio: zelfde oefening en soort; de tijden van vorige keer komen als voorstel (nog af te vinken).
           const f = formFromLogged(ex);
           const sets = kind === "time" ? f.sets.map((st) => ({ ...st, done: false as const })) : f.sets;
-          const cardio = f.cardio ? { ...f.cardio, distance: "", duration: "" } : undefined;
-          return { exercise: ex.exercise, kind, cardio, sets, notes: "", isExpanded: index === 0 };
+          return { exercise: ex.exercise, kind, cardio: f.cardio, ...(f.cardio ? { cardioDone: false } : {}), sets, notes: "", isExpanded: index === 0 };
         }
         const last = lastFor(ex.exercise);
         return {
@@ -282,22 +291,31 @@ export function WorkoutForm({
     setExercises(updated);
   };
 
+  /** Cardio van de laatste training van dit type (bv. de opwarming op de loopband), als voorstel dat je nog bevestigt. */
+  const cardioProposalsFor = (type: TrainingType): ExerciseFormData[] => {
+    if (type === "Cardio" || type === "Custom" || type === "Onbekend") return [];
+    const last = findLastWorkout(history, type);
+    return (last?.exercises ?? [])
+      .filter((ex) => exerciseKindOf(ex) === "cardio" && ex.cardio)
+      .map((ex) => ({ exercise: "", ...formFromLogged(ex), cardioDone: false, notes: "", isExpanded: true }));
+  };
+
   const addCardio = () => {
-    // Een nog lege eerste oefening maakt plaats: zo kun je met cardio beginnen (warming-up) en daarna je oefeningen toevoegen.
-    if (exercises.length === 1 && formIsEmpty) {
-      setExercises([createCardioExercise()]);
+    if (trainingType === "Cardio") {
+      setExercises([...exercises.map((ex) => ({ ...ex, isExpanded: false })), createCardioExercise()]);
       return;
     }
-    setExercises([...exercises.map((ex) => ({ ...ex, isExpanded: false })), createCardioExercise()]);
+    // Cardio is meestal de opwarming, dus het komt vooraan.
+    setExercises([createCardioExercise(), ...exercises.map((ex) => ({ ...ex, isExpanded: false }))]);
   };
 
   /** Bij trainingstype Cardio begin je meteen met een cardioblok; verlaat je het type weer, dan verdwijnt een leeg blok. */
   const changeTrainingType = (value: TrainingType) => {
     setTrainingType(value);
     if (isEditing) return;
-    const isEmptyCardioOnly = exercises.every((ex) => exerciseKindOf(ex) === "cardio" && !(ex.cardio && isCardioFilled(ex.cardio)) && !ex.notes.trim());
-    if (value === "Cardio" && formIsEmpty) setExercises([createCardioExercise()]);
-    else if (value !== "Cardio" && isEmptyCardioOnly) setExercises([createEmptyExercise()]);
+    if (!formIsEmpty) return; // wat je zelf al invulde blijft staan
+    if (value === "Cardio") setExercises([createCardioExercise()]);
+    else setExercises([...cardioProposalsFor(value), createEmptyExercise()]);
   };
 
   const addSet = (exerciseIndex: number) => {
@@ -419,7 +437,7 @@ export function WorkoutForm({
     // Gedeeltelijk ingevulde of ongeldige sets worden niet stilzwijgend weggegooid.
     const hasInvalidRows = exercises.some((ex) => {
       const kind = exerciseKindOf(ex);
-      if (kind === "cardio") return !!ex.cardio && isCardioFilled(ex.cardio) && !isCardioValid(ex.cardio);
+      if (kind === "cardio") return ex.cardioDone !== false && !!ex.cardio && isCardioFilled(ex.cardio) && !isCardioValid(ex.cardio);
       if (!ex.exercise.trim()) return false;
       if (kind === "time") return ex.sets.some((s) => isTimeSetFilled(s) && !isTimeSetValid(s));
       return ex.sets.some((s) => isFilled(s) && !isValidSet(s));
@@ -436,7 +454,7 @@ export function WorkoutForm({
       .map((ex): ExerciseLog => {
         const kind = exerciseKindOf(ex);
         if (kind === "cardio") {
-          const ok = !!ex.cardio && isCardioFilled(ex.cardio) && isCardioValid(ex.cardio);
+          const ok = ex.cardioDone !== false && !!ex.cardio && isCardioFilled(ex.cardio) && isCardioValid(ex.cardio);
           return {
             exercise: ex.cardio?.activity ?? "Cardio",
             kind,
@@ -468,7 +486,8 @@ export function WorkoutForm({
       .filter((ex) => (ex.kind === "cardio" ? !!ex.cardio : ex.sets.length > 0));
 
     if (validExercises.length === 0) {
-      if (exercises.some((ex) => ex.exercise.trim() && ex.sets.some((s) => s.done === false && (ex.kind === "time" ? isTimeSetValid(s) : isValidSet(s))))) {
+      if (exercises.some((ex) => ex.exercise.trim() && ex.sets.some((s) => s.done === false && (ex.kind === "time" ? isTimeSetValid(s) : isValidSet(s))))
+        || exercises.some((ex) => ex.cardioDone === false)) {
         toast.error("Vink de sets af die je gedaan hebt, of pas ze aan, om op te slaan.");
       }
       return;
@@ -493,7 +512,7 @@ export function WorkoutForm({
 
   // De snelstart verschijnt alleen bij een leeg formulier, zodat hij nooit iets overschrijft wat je al hebt ingevuld.
   const formIsEmpty = exercises.every(
-    (ex) => !ex.exercise.trim() && !ex.notes.trim() && !ex.sets.some(isFilled) && !ex.sets.some(isTimeSetFilled) && !(ex.cardio && isCardioFilled(ex.cardio))
+    (ex) => !ex.exercise.trim() && !ex.notes.trim() && !ex.sets.some(isFilled) && !ex.sets.some(isTimeSetFilled) && !(ex.cardio && ex.cardioDone !== false && isCardioFilled(ex.cardio))
   );
   const quickStartTarget = !isEditing && formIsEmpty ? findLastWorkout(history, trainingType) : null;
 
@@ -583,6 +602,12 @@ export function WorkoutForm({
             ))}
           </SelectContent>
         </Select>
+        {trainingType !== "Cardio" && (
+          <Button type="button" variant="outline" size="sm" onClick={addCardio} className="mt-1">
+            <Activity className="w-4 h-4 mr-2" />
+            Cardio / opwarmen toevoegen
+          </Button>
+        )}
       </div>
 
       {exercises.map((exercise, exIndex) => (
@@ -655,7 +680,9 @@ export function WorkoutForm({
               {exerciseKindOf(exercise) === "cardio" && (
                 <CardioEditor
                   value={exercise.cardio ?? emptyCardio()}
-                  onChange={(cardio) => setExercises(exercises.map((e, i) => (i === exIndex ? { ...e, cardio } : e)))}
+                  onChange={(cardio) => setExercises(exercises.map((e, i) => (i === exIndex ? { ...e, cardio, cardioDone: true } : e)))}
+                  proposed={exercise.cardioDone === false}
+                  onConfirm={() => setExercises(exercises.map((e, i) => (i === exIndex ? { ...e, cardioDone: true } : e)))}
                 />
               )}
 
@@ -793,9 +820,6 @@ export function WorkoutForm({
           >
             <Plus className="w-4 h-4 mr-2" />
             Oefening toevoegen
-          </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={addCardio} className="w-full text-muted-foreground">
-            Cardio toevoegen (bv. als warming-up)
           </Button>
         </div>
       )}

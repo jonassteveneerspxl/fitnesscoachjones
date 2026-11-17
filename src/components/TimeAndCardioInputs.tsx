@@ -80,7 +80,18 @@ export function TimeSetsEditor({ sets, onChange }: TimeSetsProps) {
 }
 
 /** Eén cardio-onderdeel: soort, afstand en tijd. Tempo en snelheid verschijnen vanzelf. */
-export function CardioEditor({ value, onChange }: { value: CardioForm; onChange: (c: CardioForm) => void }) {
+export function CardioEditor({
+  value,
+  onChange,
+  proposed = false,
+  onConfirm,
+}: {
+  value: CardioForm;
+  onChange: (c: CardioForm) => void;
+  /** Voorstel van vorige keer: wordt pas opgeslagen na bevestigen of aanpassen. */
+  proposed?: boolean;
+  onConfirm?: () => void;
+}) {
   const catalog = useExerciseCatalog();
   const [adding, setAdding] = useState(false);
   const activities = catalog.cardioActivities.includes(value.activity) ? catalog.cardioActivities : [...catalog.cardioActivities, value.activity];
@@ -90,6 +101,14 @@ export function CardioEditor({ value, onChange }: { value: CardioForm; onChange:
   const invalid = (value.distance.trim() !== "" || value.duration.trim() !== "") && !isCardioValid(value);
   return (
     <div className="space-y-3">
+      {proposed && (
+        <div className="flex items-center justify-between gap-2 rounded-lg bg-primary/10 px-3 py-2">
+          <p className="text-xs text-foreground">Zoals vorige keer. Pas aan of bevestig.</p>
+          <Button type="button" size="sm" onClick={onConfirm}>
+            Gedaan
+          </Button>
+        </div>
+      )}
       <div className="space-y-1">
         <Label htmlFor="cardio-soort" className="text-sm text-muted-foreground">Soort</Label>
         <select
@@ -118,7 +137,7 @@ export function CardioEditor({ value, onChange }: { value: CardioForm; onChange:
       )}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <Label htmlFor="cardio-afstand" className="text-sm text-muted-foreground">Afstand (km)</Label>
+          <Label htmlFor="cardio-afstand" className="text-sm text-muted-foreground">Afstand (km, optioneel)</Label>
           <Input
             id="cardio-afstand"
             inputMode="decimal"
