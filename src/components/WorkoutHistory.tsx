@@ -1,3 +1,4 @@
+import { describeNonStrength } from "@/utils/cardio";
 import { trainingTypeLabel } from "@/utils/trainingTypeLabel";
 import { Workout } from "@/types/workout";
 import { Dumbbell, Calendar, ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react";
@@ -89,26 +90,30 @@ export function WorkoutHistory({ workouts, onEdit, onDelete }: WorkoutHistoryPro
                     <h4 className="font-medium text-foreground">
                       {exercise.exercise}
                     </h4>
-                    <span className="text-xs text-primary font-medium">
-                      1RM: {exercise.estimated1RM}kg
-                    </span>
+                    {!describeNonStrength(exercise) && (
+                      <span className="text-xs text-primary font-medium">
+                        1RM: {exercise.estimated1RM}kg
+                      </span>
+                    )}
                   </div>
 
                   {/* Sets */}
                   <div className="flex flex-wrap gap-1.5 mb-2">
-                    {exercise.sets.map((set, setIdx) => (
+                    {(describeNonStrength(exercise) ?? exercise.sets.map((set) => `${set.weight}kg × ${set.reps}`)).map((text, setIdx) => (
                       <span
                         key={setIdx}
                         className="px-2 py-0.5 rounded text-xs bg-muted"
                       >
-                        {set.weight}kg × {set.reps}
+                        {text}
                       </span>
                     ))}
                   </div>
 
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>Volume: {exercise.volume.toLocaleString()}kg</span>
-                  </div>
+                  {!describeNonStrength(exercise) && (
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>Volume: {exercise.volume.toLocaleString()}kg</span>
+                    </div>
+                  )}
 
                   {exercise.notes && (
                     <p className="mt-2 text-xs text-muted-foreground italic">

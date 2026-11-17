@@ -46,3 +46,23 @@ export function formatPace(c: Pick<CardioData, "distanceKm" | "durationSeconds">
 export function speedKmh(c: Pick<CardioData, "distanceKm" | "durationSeconds">): number | null {
   return c.distanceKm > 0 ? Math.round((c.distanceKm / (c.durationSeconds / 3600)) * 10) / 10 : null;
 }
+
+const km = (n: number) => `${n.toLocaleString("nl-BE", { maximumFractionDigits: 2 })} km`;
+
+/** "1:00" of "1:00 + 10 kg". */
+export function describeTimeSet(set: { weight: number; durationSeconds?: number }): string {
+  const t = formatDuration(set.durationSeconds ?? 0);
+  return set.weight > 0 ? `${t} + ${set.weight.toLocaleString("nl-BE", { maximumFractionDigits: 1 })} kg` : t;
+}
+
+/** "10 km · 50:00 · 5:00/km"; afstand en tempo ontbreken als er geen afstand is ingevuld. */
+export function describeCardio(c: CardioData): string {
+  return [c.distanceKm > 0 ? km(c.distanceKm) : null, formatDuration(c.durationSeconds), formatPace(c)].filter(Boolean).join(" · ");
+}
+
+/** Korte blokjes voor een tijd- of cardio-oefening in lijsten; `null` voor krachtoefeningen. */
+export function describeNonStrength(ex: Pick<ExerciseLog, "kind" | "cardio" | "sets">): string[] | null {
+  if (ex.kind === "cardio" && ex.cardio) return [describeCardio(ex.cardio)];
+  if (ex.kind === "time") return ex.sets.map(describeTimeSet);
+  return null;
+}

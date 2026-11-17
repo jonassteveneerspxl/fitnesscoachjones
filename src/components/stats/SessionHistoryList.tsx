@@ -75,7 +75,13 @@ export function SessionHistoryList({ sessions, allSessions }: SessionHistoryList
                   {s.exercises.map((e) => (
                     <div key={e.exerciseKey} className="text-xs">
                       <span className="text-muted-foreground">{e.exerciseName}: </span>
-                      {e.hasSets ? (
+                      {e.chips ? (
+                        e.chips.map((c, i) => (
+                          <span key={i} className="inline-block mr-1.5 px-1.5 py-0.5 rounded bg-muted text-foreground">
+                            {c}
+                          </span>
+                        ))
+                      ) : e.hasSets ? (
                         e.sets.map((set, i) => (
                           <span key={i} className="inline-block mr-1.5 px-1.5 py-0.5 rounded bg-muted text-foreground">
                             {set.weight}kg × {set.reps}

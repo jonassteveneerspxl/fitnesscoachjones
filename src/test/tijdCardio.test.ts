@@ -113,3 +113,45 @@ describe("duur en tempo", () => {
     expect(formatPace({ distanceKm: 0, durationSeconds: 600 })).toBeNull();
   });
 });
+
+import { compareCardioWeeks, timedProgress } from "@/utils/statistics";
+
+const run = (id: string, iso: string, km: number, sec: number) =>
+  makeWorkout({
+    id,
+    startedAt: iso,
+    timeZone: "Europe/Brussels",
+    trainingType: "Cardio",
+    exercises: [{ exercise: "Lopen", kind: "cardio", cardio: { activity: "Lopen", distanceKm: km, durationSeconds: sec }, sets: [], volume: 0, estimated1RM: 0 }],
+  });
+const plank = (id: string, iso: string, ...secs: number[]) =>
+  makeWorkout({
+    id,
+    startedAt: iso,
+    timeZone: "Europe/Brussels",
+    exercises: [{ exercise: "Plank", kind: "time", sets: secs.map((d, i) => ({ setNumber: i + 1, weight: 0, reps: 0, durationSeconds: d })), volume: 0, estimated1RM: 0 }],
+  });
+
+describe("statistieken voor cardio en tijdoefeningen", () => {
+  it("telt cardio per week en vergelijkt met vorige week", () => {
+    const { sessions } = buildSessions([
+      run("a", "2026-11-10T10:00:00.000Z", 10, 3000),
+      run("b", "2026-11-12T10:00:00.000Z", 5, 1500),
+      run("c", "2026-11-03T10:00:00.000Z", 8, 2400),
+    ]);
+    const r = compareCardioWeeks(sessions, "2026-11-15");
+    expect(r.thisWeek).toEqual({ count: 2, km: 15, seconds: 4500 });
+    expect(r.lastWeek).toEqual({ count: 1, km: 8, seconds: 2400 });
+  });
+
+  it("toont per tijdoefening de langste set nu en de vorige keer", () => {
+    const { sessions } = buildSessions([plank("p1", "2026-11-03T10:00:00.000Z", 60, 45), plank("p2", "2026-11-10T10:00:00.000Z", 50, 75)]);
+    const [t] = timedProgress(sessions);
+    expect(t).toMatchObject({ exerciseName: "Plank", lastSeconds: 75, previousSeconds: 60, sessions: 2 });
+  });
+
+  it("één sessie heeft geen vorige", () => {
+    const { sessions } = buildSessions([plank("p1", "2026-11-03T10:00:00.000Z", 60)]);
+    expect(timedProgress(sessions)[0].previousSeconds).toBeNull();
+  });
+});
