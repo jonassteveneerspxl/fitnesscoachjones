@@ -37,3 +37,29 @@ describe("OverviewSection", () => {
     expect(screen.getByText(/geen nieuwe records/i)).toBeTruthy();
   });
 });
+
+describe("OverviewSection cardio en tijd", () => {
+  const w = { sessions: 1, volume: 0, sets: 0 };
+  it("toont cardio van de week en de voortgang van een tijdoefening", () => {
+    render(
+      <OverviewSection
+        weeks={{ thisWeek: w, lastWeek: w }}
+        trends={[]}
+        records={[]}
+        cardio={{ thisWeek: { count: 2, km: 15, seconds: 4500 }, lastWeek: { count: 0, km: 0, seconds: 0 } }}
+        timed={[{ exerciseKey: "plank", exerciseName: "Plank", lastSeconds: 75, lastWeight: 0, lastDateKey: "2026-11-10", previousSeconds: 60, sessions: 2 }]}
+        onSelectExercise={() => {}}
+      />
+    );
+    expect(screen.getByTestId("cardio-week").textContent).toMatch(/15 km/);
+    expect(screen.getByTestId("cardio-week").textContent).toMatch(/1:15:00/);
+    expect(screen.getByTestId("timed-progress").textContent).toMatch(/1:15/);
+    expect(screen.getByTestId("timed-progress").textContent).toMatch(/\+0:15/);
+  });
+
+  it("toont geen cardio- of tijdblok zonder data", () => {
+    render(<OverviewSection weeks={{ thisWeek: w, lastWeek: w }} trends={[]} records={[]} onSelectExercise={() => {}} />);
+    expect(screen.queryByTestId("cardio-week")).toBeNull();
+    expect(screen.queryByTestId("timed-progress")).toBeNull();
+  });
+});

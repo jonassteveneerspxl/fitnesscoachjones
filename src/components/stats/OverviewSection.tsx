@@ -1,6 +1,7 @@
 import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
 import { InfoTip } from "@/components/InfoTip";
-import type { ExerciseTrend, RecentRecord, WeekComparisonResult } from "@/utils/statistics";
+import type { CardioTotals, ExerciseTrend, RecentRecord, TimedProgress, WeekComparisonResult } from "@/utils/statistics";
+import { formatDuration } from "@/utils/cardio";
 import { formatShortDate } from "@/utils/dates";
 import { formatKg } from "@/utils/format";
 
@@ -8,6 +9,8 @@ interface Props {
   weeks: WeekComparisonResult;
   trends: ExerciseTrend[];
   records: RecentRecord[];
+  cardio?: { thisWeek: CardioTotals; lastWeek: CardioTotals };
+  timed?: TimedProgress[];
   onSelectExercise: (exerciseKey: string) => void;
 }
 
@@ -26,7 +29,7 @@ function Diff({ now, before, unit = "" }: { now: number; before: number; unit?: 
 const trendText = (t: ExerciseTrend) =>
   t.direction === "same" ? "gelijk" : `${t.percent > 0 ? "+" : "−"}${Math.abs(t.percent).toLocaleString("nl-BE")}%`;
 
-export function OverviewSection({ weeks, trends, records, onSelectExercise }: Props) {
+export function OverviewSection({ weeks, trends, records, cardio, timed = [], onSelectExercise }: Props) {
   const { thisWeek, lastWeek } = weeks;
   return (
     <section className="space-y-3" aria-label="Overzicht">
@@ -131,6 +134,49 @@ export function OverviewSection({ weeks, trends, records, onSelectExercise }: Pr
           </ul>
         )}
       </div>
+
+      {cardio && (cardio.thisWeek.count > 0 || cardio.lastWeek.count > 0) && (
+        <div className="p-4 rounded-2xl gradient-card border border-border space-y-2" data-testid="cardio-week">
+          <h3 className="text-sm font-semibold text-foreground">Cardio</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: "Deze week", c: cardio.thisWeek },
+              { label: "Vorige week", c: cardio.lastWeek },
+            ].map(({ label, c }) => (
+              <div key={label}>
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="text-lg font-bold text-foreground">
+                  {c.km > 0 ? `${c.km.toLocaleString("nl-BE")} km` : "–"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {c.count} keer · {formatDuration(c.seconds)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {timed.length > 0 && (
+        <div className="p-4 rounded-2xl gradient-card border border-border space-y-2" data-testid="timed-progress">
+          <h3 className="text-sm font-semibold text-foreground">Tijdoefeningen</h3>
+          <p className="text-xs text-muted-foreground">Langste set van je laatste training, tegenover de keer daarvoor.</p>
+          <ul className="divide-y divide-border">
+            {timed.slice(0, 6).map((t) => {
+              const diff = t.previousSeconds === null ? null : t.lastSeconds - t.previousSeconds;
+              return (
+                <li key={t.exerciseKey} className="flex items-center gap-3 py-2">
+                  <span className="flex-1 min-w-0 truncate text-sm text-foreground">{t.exerciseName}</span>
+                  <span className="text-sm font-semibold text-foreground">{formatDuration(t.lastSeconds)}</span>
+                  <span className="text-xs text-muted-foreground w-24 text-right">
+                    {diff === null ? "eerste keer" : diff === 0 ? "gelijk" : `${diff > 0 ? "+" : "−"}${formatDuration(Math.abs(diff))}`}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }

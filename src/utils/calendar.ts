@@ -85,6 +85,7 @@ export function summarizeMonth(monthKey: string, sessions: Session[], todayKey: 
 export function shortTypeLabel(type: string): string {
   if (type === "Full Body") return "Full";
   if (type === "Onbekend") return "";
+  if (type === "Cardio") return "Cardio";
   if (type === "Custom") return "Eigen";
   return type;
 }

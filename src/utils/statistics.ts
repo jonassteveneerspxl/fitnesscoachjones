@@ -9,6 +9,7 @@
  *  - setvolume      = gewicht × reps van één set
  *  - volume         = som van gewicht × reps over alle sets (van een oefening of van een training)
  */
+import { describeNonStrength } from "@/utils/cardio";
 import { PRType, SetLike, TrainingType, Workout } from "@/types/workout";
 import { normalizeExerciseName } from "@/utils/exerciseNames";
 import {
@@ -35,6 +36,8 @@ import {
 // ---------------------------------------------------------------------------------------------------------
 
 export interface SessionExercise {
+  /** Alleen bij tijd- en cardio-oefeningen: kant-en-klare tekst per set of onderdeel (bv. "10 km · 50:00 · 5:00/km"). */
+  chips?: string[];
   exerciseKey: string;
   exerciseName: string;
   /** Alleen geldige sets (eindig, gewicht ≥ 0, reps ≥ 1). */
@@ -94,6 +97,7 @@ function toSessionExercise(raw: Workout["exercises"][number]): SessionExercise {
     sets: valid,
     stats,
     hasSets: stats.setCount > 0,
+    ...(describeNonStrength(raw) ? { chips: describeNonStrength(raw) as string[] } : {}),
   };
 }
 
@@ -701,4 +705,78 @@ export function recentRecords(sessions: Session[], todayKey: string, days = 30):
     }
   }
   return [...latest.values()].sort((a, b) => b.dateKey.localeCompare(a.dateKey) || a.exerciseName.localeCompare(b.exerciseName));
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Cardio en tijdoefeningen
+// ---------------------------------------------------------------------------------------------------------
+
+export interface CardioTotals {
+  /** Aantal cardio-onderdelen. */
+  count: number;
+  km: number;
+  seconds: number;
+}
+
+function cardioTotals(sessions: Session[], weekKey: string): CardioTotals {
+  const items = sessions
+    .filter((s) => s.weekKey === weekKey)
+    .flatMap((s) => s.workout.exercises)
+    .filter((e) => e.kind === "cardio" && e.cardio);
+  return {
+    count: items.length,
+    km: round1(items.reduce((sum, e) => sum + (e.cardio?.distanceKm ?? 0), 0)),
+    seconds: items.reduce((sum, e) => sum + (e.cardio?.durationSeconds ?? 0), 0),
+  };
+}
+
+/** Cardio van de huidige ISO-week tegenover de week ervoor. */
+export function compareCardioWeeks(sessions: Session[], todayKey: string): { thisWeek: CardioTotals; lastWeek: CardioTotals } {
+  return {
+    thisWeek: cardioTotals(sessions, toIsoWeekKey(todayKey)),
+    lastWeek: cardioTotals(sessions, toIsoWeekKey(addDaysToDateKey(todayKey, -7))),
+  };
+}
+
+export interface TimedProgress {
+  exerciseKey: string;
+  exerciseName: string;
+  /** Langste set van de laatste sessie (seconden) en het extra gewicht daarbij. */
+  lastSeconds: number;
+  lastWeight: number;
+  lastDateKey: string;
+  /** Langste set van de sessie daarvoor; `null` als er maar één sessie is. */
+  previousSeconds: number | null;
+  sessions: number;
+}
+
+/** Per tijdoefening (plank, deadhang): de langste set van de laatste sessie tegenover de sessie daarvoor. */
+export function timedProgress(sessions: Session[]): TimedProgress[] {
+  const byKey = new Map<string, { name: string; points: { dateKey: string; seconds: number; weight: number }[] }>();
+  for (const s of sessions) {
+    for (const e of s.workout.exercises) {
+      if (e.kind !== "time") continue;
+      const sets = e.sets.filter((x) => (x.durationSeconds ?? 0) > 0);
+      if (sets.length === 0) continue;
+      const best = sets.reduce((a, b) => ((b.durationSeconds ?? 0) > (a.durationSeconds ?? 0) || ((b.durationSeconds ?? 0) === (a.durationSeconds ?? 0) && b.weight > a.weight) ? b : a));
+      const key = normalizeExerciseName(e.exercise);
+      const entry = byKey.get(key) ?? { name: e.exercise.trim(), points: [] };
+      entry.points.push({ dateKey: s.dateKey, seconds: best.durationSeconds ?? 0, weight: best.weight });
+      byKey.set(key, entry);
+    }
+  }
+  return [...byKey.entries()]
+    .map(([exerciseKey, { name, points }]) => {
+      const last = points[points.length - 1];
+      return {
+        exerciseKey,
+        exerciseName: name,
+        lastSeconds: last.seconds,
+        lastWeight: last.weight,
+        lastDateKey: last.dateKey,
+        previousSeconds: points.length > 1 ? points[points.length - 2].seconds : null,
+        sessions: points.length,
+      };
+    })
+    .sort((a, b) => b.lastDateKey.localeCompare(a.lastDateKey) || a.exerciseName.localeCompare(b.exerciseName));
 }

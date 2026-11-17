@@ -23,13 +23,13 @@ describe("compareWeeks", () => {
     expect(r.lastWeek).toEqual({ sessions: 1, volume: 450, sets: 1 });
   });
 
-  it("opwarmsets tellen niet mee in sets en volume", () => {
+  it("alle sets tellen mee, ook als ze in oude data als opwarmset gemarkeerd zijn", () => {
     const ex = makeExercise("Bench Press", [[100, 5]]);
     ex.sets = [{ setNumber: 1, weight: 40, reps: 10, isWarmup: true }, ...ex.sets];
     const { sessions } = buildSessions([w("2026-11-10T10:00:00.000Z", [ex])]);
     const r = compareWeeks(sessions, TODAY);
-    expect(r.thisWeek.sets).toBe(1);
-    expect(r.thisWeek.volume).toBe(500);
+    expect(r.thisWeek.sets).toBe(2);
+    expect(r.thisWeek.volume).toBe(900);
   });
 });
 
@@ -90,12 +90,11 @@ describe("recentRecords", () => {
     expect(recentRecords(sessions, TODAY)).toEqual([]);
   });
 
-  it("gelijk of lager is geen record, en opwarmsets tellen niet", () => {
-    const ex = makeExercise("Bench Press", [[100, 5]]);
-    ex.sets = [{ setNumber: 1, weight: 150, reps: 5, isWarmup: true }, ...ex.sets];
+  it("gelijk of lager is geen record", () => {
     const { sessions } = buildSessions([
       w("2026-11-03T10:00:00.000Z", [bench([100, 5])]),
-      w("2026-11-10T10:00:00.000Z", [ex]),
+      w("2026-11-10T10:00:00.000Z", [bench([100, 5])]),
+      w("2026-11-12T10:00:00.000Z", [bench([90, 5])]),
     ]);
     expect(recentRecords(sessions, TODAY)).toEqual([]);
   });

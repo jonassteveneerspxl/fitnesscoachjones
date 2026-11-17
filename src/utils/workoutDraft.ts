@@ -9,7 +9,7 @@
  * statistieken en raakt de opgeslagen workouts niet aan. Alle functies gooien nooit een fout; opslag die niet
  * beschikbaar of vol is, betekent alleen dat er geen concept bewaard wordt.
  */
-import { SELECTABLE_TRAINING_TYPES, TrainingType } from "@/types/workout";
+import { CARDIO_ACTIVITIES, CardioActivity, EXERCISE_KINDS, ExerciseKind, SELECTABLE_TRAINING_TYPES, TrainingType } from "@/types/workout";
 import type { StorageLike } from "@/utils/workoutStorage";
 
 export const DRAFT_KEY = "fitness-coach-draft-v1";
@@ -25,6 +25,7 @@ function copySet(s: DraftSet): DraftSet {
   return {
     weight: s.weight,
     reps: s.reps,
+    ...(typeof s.duration === "string" && s.duration.length <= MAX_TEXT ? { duration: s.duration } : {}),
     ...(s.done === false ? { done: false } : {}),
   };
 }
@@ -36,12 +37,22 @@ const MAX_TEXT = 5000;
 export interface DraftSet {
   weight: string;
   reps: string;
+  /** Tijdoefening: duur als tekst ("1:30" of seconden). */
+  duration?: string;
   /** Alleen `false` wordt bewaard: een voorgestelde set (vorige keer) die nog niet is afgevinkt. */
   done?: boolean;
 }
 
+export interface DraftCardio {
+  activity: CardioActivity;
+  distance: string;
+  duration: string;
+}
+
 export interface DraftExercise {
   exercise: string;
+  kind?: ExerciseKind;
+  cardio?: DraftCardio;
   sets: DraftSet[];
   notes: string;
   isExpanded: boolean;
@@ -68,7 +79,8 @@ export function isDraftEmpty(exercises: DraftExercise[]): boolean {
     (ex) =>
       ex.exercise.trim() === "" &&
       ex.notes.trim() === "" &&
-      ex.sets.every((s) => s.weight.trim() === "" && s.reps.trim() === "")
+      ex.sets.every((s) => s.weight.trim() === "" && s.reps.trim() === "" && (s.duration ?? "").trim() === "") &&
+      (!ex.cardio || (ex.cardio.distance.trim() === "" && ex.cardio.duration.trim() === ""))
   );
 }
 
@@ -80,8 +92,18 @@ function parseExercise(raw: unknown): DraftExercise | null {
     if (!isRecord(s) || !isText(s.weight) || !isText(s.reps)) return null;
     sets.push(copySet(s as unknown as DraftSet));
   }
+  const kind = EXERCISE_KINDS.includes(raw.kind as ExerciseKind) && raw.kind !== "strength" ? (raw.kind as ExerciseKind) : undefined;
+  let cardio: DraftCardio | undefined;
+  if (isRecord(raw.cardio) && isText(raw.cardio.distance) && isText(raw.cardio.duration)) {
+    const activity = (CARDIO_ACTIVITIES as readonly unknown[]).includes(raw.cardio.activity)
+      ? (raw.cardio.activity as CardioActivity)
+      : "Andere";
+    cardio = { activity, distance: raw.cardio.distance, duration: raw.cardio.duration };
+  }
   return {
     exercise: raw.exercise,
+    ...(kind ? { kind } : {}),
+    ...(cardio ? { cardio } : {}),
     sets,
     // Een te lange notitie wordt ingekort in plaats van het hele concept te weigeren: de sets gaan voor.
     notes: typeof raw.notes === "string" ? raw.notes.slice(0, MAX_TEXT) : "",
@@ -151,6 +173,8 @@ export function saveDraft(
       trainingType,
       exercises: exercises.map((ex) => ({
         exercise: ex.exercise,
+        ...(ex.kind && ex.kind !== "strength" ? { kind: ex.kind } : {}),
+        ...(ex.cardio ? { cardio: { ...ex.cardio } } : {}),
         sets: ex.sets.map(copySet),
         notes: ex.notes,
         isExpanded: ex.isExpanded,

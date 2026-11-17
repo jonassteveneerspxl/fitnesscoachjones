@@ -35,6 +35,8 @@ import {
   volumePerSession,
   compareWeeks,
   recentRecords,
+  compareCardioWeeks,
+  timedProgress,
   exerciseTrends,
 } from "@/utils/statistics";
 import {
@@ -82,6 +84,8 @@ const Statistics = () => {
   );
   const newestFirst = useMemo(() => [...sessions].reverse(), [sessions]);
   const weeks = useMemo(() => compareWeeks(built.sessions, today), [built.sessions, today]);
+  const cardioWeeks = useMemo(() => compareCardioWeeks(built.sessions, today), [built.sessions, today]);
+  const timed = useMemo(() => timedProgress(built.sessions), [built.sessions]);
   const recent = useMemo(() => recentRecords(built.sessions, today), [built.sessions, today]);
   const trends = useMemo(() => exerciseTrends(built.sessions, today), [built.sessions, today]);
   const summary = useMemo(() => summarize(sessions), [sessions]);
@@ -192,6 +196,8 @@ const Statistics = () => {
           weeks={weeks}
           trends={trends}
           records={recent}
+          cardio={cardioWeeks}
+          timed={timed}
           onSelectExercise={(key) => setFilters({ ...filters, exerciseKey: key })}
         />
 
