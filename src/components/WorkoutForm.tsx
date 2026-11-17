@@ -41,7 +41,7 @@ import { useOptionalAuth } from "@/context/AuthContext";
 import { getBrowserStorage } from "@/utils/workoutStorage";
 import { LastPerformance, findLastPerformance, findLastWorkout, suggestNextTarget } from "@/utils/lastPerformance";
 import { describeWorkoutMoment } from "@/utils/dates";
-import { CardioEditor, KindToggle, TimeSetsEditor } from "@/components/TimeAndCardioInputs";
+import { CardioEditor, TimeSetsEditor } from "@/components/TimeAndCardioInputs";
 import { exerciseKindOf, formatDuration } from "@/utils/cardio";
 import {
   CardioForm,
@@ -117,6 +117,15 @@ const formFromLogged = (ex: Workout["exercises"][number]): Pick<ExerciseFormData
   }
   return { sets: ex.sets.map((s) => ({ weight: String(s.weight), reps: String(s.reps) })) };
 };
+
+const createCardioExercise = (): ExerciseFormData => ({
+  exercise: "",
+  kind: "cardio",
+  cardio: emptyCardio(),
+  sets: [{ weight: "", reps: "" }],
+  notes: "",
+  isExpanded: true,
+});
 
 const createFormDataFromWorkout = (workout: Workout): ExerciseFormData[] =>
   workout.exercises.map((ex, index) => ({
@@ -260,16 +269,27 @@ export function WorkoutForm({
     if (lastNew && (untouched || isOldPrefill)) sets = setsFromLast(lastNew);
     else if (isOldPrefill) sets = [{ weight: "", reps: "" }];
     const updated = [...exercises];
-    const suggested = untouched && exerciseKindOf(current) === "strength" ? suggestKind(value) : exerciseKindOf(current);
+    const suggested = untouched && exerciseKindOf(current) !== "cardio" ? suggestKind(value) : exerciseKindOf(current);
     updated[index] = { ...current, exercise: value, sets, ...(suggested !== exerciseKindOf(current) ? { kind: suggested } : {}) };
     setExercises(updated);
   };
 
-  const setKind = (index: number, kind: ExerciseKind) => {
-    const updated = [...exercises];
-    const cur = updated[index];
-    updated[index] = { ...cur, kind, ...(kind === "cardio" ? { cardio: cur.cardio ?? emptyCardio() } : {}) };
-    setExercises(updated);
+  const addCardio = () => {
+    // Een nog lege eerste oefening maakt plaats: zo kun je met cardio beginnen (warming-up) en daarna je oefeningen toevoegen.
+    if (exercises.length === 1 && formIsEmpty) {
+      setExercises([createCardioExercise()]);
+      return;
+    }
+    setExercises([...exercises.map((ex) => ({ ...ex, isExpanded: false })), createCardioExercise()]);
+  };
+
+  /** Bij trainingstype Cardio begin je meteen met een cardioblok; verlaat je het type weer, dan verdwijnt een leeg blok. */
+  const changeTrainingType = (value: TrainingType) => {
+    setTrainingType(value);
+    if (isEditing) return;
+    const isEmptyCardioOnly = exercises.every((ex) => exerciseKindOf(ex) === "cardio" && !(ex.cardio && isCardioFilled(ex.cardio)) && !ex.notes.trim());
+    if (value === "Cardio" && formIsEmpty) setExercises([createCardioExercise()]);
+    else if (value !== "Cardio" && isEmptyCardioOnly) setExercises([createEmptyExercise()]);
   };
 
   const addSet = (exerciseIndex: number) => {
@@ -539,7 +559,7 @@ export function WorkoutForm({
         <Label className="text-sm text-muted-foreground">Trainingstype</Label>
         <Select
           value={trainingType}
-          onValueChange={(value) => setTrainingType(value as TrainingType)}
+          onValueChange={(value) => changeTrainingType(value as TrainingType)}
         >
           <SelectTrigger className="bg-background border-border" aria-label="Trainingstype">
             <SelectValue placeholder="Kies een type" />
@@ -604,8 +624,6 @@ export function WorkoutForm({
           {/* Exercise Content */}
           {exercise.isExpanded && (
             <div className="p-4 pt-0 space-y-4">
-              <KindToggle value={exerciseKindOf(exercise)} onChange={(k) => setKind(exIndex, k)} />
-
               {/* Exercise Name */}
               {exerciseKindOf(exercise) !== "cardio" && (
                 <div className="space-y-2">
@@ -747,15 +765,32 @@ export function WorkoutForm({
       ))}
 
       {/* Add Exercise Button */}
-      <Button
-        type="button"
-        variant="outline"
-        onClick={addExercise}
-        className="w-full border-dashed border-border hover:border-primary hover:bg-primary/10"
-      >
-        <Plus className="w-4 h-4 mr-2" />
-        Oefening toevoegen
-      </Button>
+      {trainingType === "Cardio" ? (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={addCardio}
+          className="w-full border-dashed border-border hover:border-primary hover:bg-primary/10"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Cardio toevoegen
+        </Button>
+      ) : (
+        <div className="space-y-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={addExercise}
+            className="w-full border-dashed border-border hover:border-primary hover:bg-primary/10"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Oefening toevoegen
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={addCardio} className="w-full text-muted-foreground">
+            Cardio toevoegen (bv. als warming-up)
+          </Button>
+        </div>
+      )}
 
       {/* Submit */}
       <Button

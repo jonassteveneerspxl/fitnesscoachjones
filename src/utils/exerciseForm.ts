@@ -58,7 +58,7 @@ export function buildCardio(c: CardioForm): CardioData {
   };
 }
 
-/** Voorstel voor het soort oefening op basis van de naam; de gebruiker kan het altijd aanpassen. */
+/** Houd-oefeningen (plank, deadhang, L-sit, V-sit…) worden op tijd gelogd; alle andere oefeningen met gewicht en herhalingen. */
 export function suggestKind(name: string): ExerciseKind {
-  return /\b(plank|planken|dead ?hang|hollow (hold|body)|wall sit|l-?sit)\b/i.test(name) ? "time" : "strength";
+  return /\b(plank|planken|dead ?hang|hollow (hold|body)|wall sit|[lv][- ]?(sit|hold))\b/i.test(name) ? "time" : "strength";
 }

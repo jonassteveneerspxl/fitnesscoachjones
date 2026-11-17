@@ -2,32 +2,9 @@ import { Check, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CARDIO_ACTIVITIES, CardioActivity, ExerciseKind } from "@/types/workout";
+import { CARDIO_ACTIVITIES, CardioActivity } from "@/types/workout";
 import { formatPace, parseDuration, speedKmh } from "@/utils/cardio";
 import { CardioForm, TimeSetForm, isCardioValid } from "@/utils/exerciseForm";
-
-const KIND_LABELS: Record<ExerciseKind, string> = { strength: "Kracht", time: "Tijd", cardio: "Cardio" };
-
-/** Keuze tussen gewicht × herhalingen, een tijdoefening (plank, deadhang) en cardio. */
-export function KindToggle({ value, onChange }: { value: ExerciseKind; onChange: (k: ExerciseKind) => void }) {
-  return (
-    <div role="group" aria-label="Soort oefening" className="inline-flex rounded-lg border border-border p-0.5">
-      {(Object.keys(KIND_LABELS) as ExerciseKind[]).map((k) => (
-        <button
-          key={k}
-          type="button"
-          aria-pressed={value === k}
-          onClick={() => onChange(k)}
-          className={`px-3 py-1 text-xs rounded-md transition-colors ${
-            value === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {KIND_LABELS[k]}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 interface TimeSetsProps {
   sets: TimeSetForm[];
@@ -39,7 +16,7 @@ export function TimeSetsEditor({ sets, onChange }: TimeSetsProps) {
   const update = (i: number, patch: Partial<TimeSetForm>) => onChange(sets.map((s, j) => (j === i ? { ...s, ...patch } : s)));
   return (
     <div className="space-y-2">
-      <Label className="text-sm text-muted-foreground">Sets (tijd)</Label>
+      <Label className="text-sm text-muted-foreground">Sets (tijd vasthouden)</Label>
       {sets.map((set, i) => {
         const done = set.done !== false;
         return (
