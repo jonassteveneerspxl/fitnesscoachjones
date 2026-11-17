@@ -9,7 +9,7 @@
  * statistieken en raakt de opgeslagen workouts niet aan. Alle functies gooien nooit een fout; opslag die niet
  * beschikbaar of vol is, betekent alleen dat er geen concept bewaard wordt.
  */
-import { CARDIO_ACTIVITIES, CardioActivity, EXERCISE_KINDS, ExerciseKind, SELECTABLE_TRAINING_TYPES, TrainingType } from "@/types/workout";
+import { CardioActivity, EXERCISE_KINDS, MAX_ACTIVITY_LENGTH, ExerciseKind, SELECTABLE_TRAINING_TYPES, TrainingType } from "@/types/workout";
 import type { StorageLike } from "@/utils/workoutStorage";
 
 export const DRAFT_KEY = "fitness-coach-draft-v1";
@@ -95,9 +95,10 @@ function parseExercise(raw: unknown): DraftExercise | null {
   const kind = EXERCISE_KINDS.includes(raw.kind as ExerciseKind) && raw.kind !== "strength" ? (raw.kind as ExerciseKind) : undefined;
   let cardio: DraftCardio | undefined;
   if (isRecord(raw.cardio) && isText(raw.cardio.distance) && isText(raw.cardio.duration)) {
-    const activity = (CARDIO_ACTIVITIES as readonly unknown[]).includes(raw.cardio.activity)
-      ? (raw.cardio.activity as CardioActivity)
-      : "Andere";
+    const activity: CardioActivity =
+      typeof raw.cardio.activity === "string" && raw.cardio.activity.trim() !== "" && raw.cardio.activity.length <= MAX_ACTIVITY_LENGTH
+        ? raw.cardio.activity
+        : "Andere";
     cardio = { activity, distance: raw.cardio.distance, duration: raw.cardio.duration };
   }
   return {

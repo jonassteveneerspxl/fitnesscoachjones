@@ -2,7 +2,10 @@ import { Check, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CARDIO_ACTIVITIES, CardioActivity } from "@/types/workout";
+import { useState } from "react";
+import { AddExerciseDialog } from "@/components/AddExerciseDialog";
+import { useExerciseCatalog } from "@/context/ExerciseCatalogContext";
+import { CardioActivity } from "@/types/workout";
 import { formatPace, parseDuration, speedKmh } from "@/utils/cardio";
 import { CardioForm, TimeSetForm, isCardioValid } from "@/utils/exerciseForm";
 
@@ -78,6 +81,9 @@ export function TimeSetsEditor({ sets, onChange }: TimeSetsProps) {
 
 /** Eén cardio-onderdeel: soort, afstand en tijd. Tempo en snelheid verschijnen vanzelf. */
 export function CardioEditor({ value, onChange }: { value: CardioForm; onChange: (c: CardioForm) => void }) {
+  const catalog = useExerciseCatalog();
+  const [adding, setAdding] = useState(false);
+  const activities = catalog.cardioActivities.includes(value.activity) ? catalog.cardioActivities : [...catalog.cardioActivities, value.activity];
   const secs = parseDuration(value.duration, "minutes");
   const km = Number(value.distance.trim().replace(",", "."));
   const live = secs !== null && km > 0 ? { distanceKm: km, durationSeconds: secs } : null;
@@ -92,11 +98,24 @@ export function CardioEditor({ value, onChange }: { value: CardioForm; onChange:
           value={value.activity}
           onChange={(e) => onChange({ ...value, activity: e.target.value as CardioActivity })}
         >
-          {CARDIO_ACTIVITIES.map((a) => (
+          {activities.map((a) => (
             <option key={a} value={a}>{a}</option>
           ))}
         </select>
       </div>
+      {catalog.canAdd && (
+        <>
+          <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setAdding(true)}>
+            + Eigen cardiosoort toevoegen
+          </Button>
+          <AddExerciseDialog
+            open={adding}
+            onOpenChange={setAdding}
+            defaultKind="cardio"
+            onAdded={(name) => onChange({ ...value, activity: name })}
+          />
+        </>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label htmlFor="cardio-afstand" className="text-sm text-muted-foreground">Afstand (km)</Label>

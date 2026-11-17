@@ -5,8 +5,11 @@
  */
 import { Exercise, MuscleGroup, PPLCategory, exercises as builtIn, muscleGroupLabels } from "@/data/exercises";
 import { isSameExercise } from "@/utils/exerciseNames";
+import { EXERCISE_KINDS, ExerciseKind } from "@/types/workout";
 
 export interface CustomExercise extends Exercise {
+  /** Afwezig = kracht (gewicht en herhalingen). "time" = houd-oefening, "cardio" = afstand en tijd. */
+  kind?: ExerciseKind;
   id: string;
   createdAt: string;
   custom: true;
@@ -30,8 +33,15 @@ export function defaultPplFor(muscle: MuscleGroup): PPLCategory {
 
 export const cleanName = (name: string) => name.replace(/\s+/g, " ").trim();
 
+/**
+ * Voor een cardio-oefening is er geen spiergroep. De velden `muscleGroup` en `pplCategory` hebben dan alleen een
+ * vulwaarde zodat het type klopt; cardio-oefeningen zitten niet in de lijst met krachtoefeningen en tellen niet per spiergroep.
+ */
+const CARDIO_FILLER: { muscleGroup: MuscleGroup; pplCategory: PPLCategory } = { muscleGroup: "core", pplCategory: "legs" };
+
 export interface NewExerciseInput {
   name: string;
+  kind?: string;
   muscleGroup: string;
   equipment?: string;
 }
@@ -39,7 +49,7 @@ export interface NewExerciseInput {
 export interface ValidationResult {
   ok: boolean;
   message?: string;
-  value?: { name: string; muscleGroup: MuscleGroup; pplCategory: PPLCategory; equipment?: string };
+  value?: { name: string; kind?: ExerciseKind; muscleGroup: MuscleGroup; pplCategory: PPLCategory; equipment?: string };
 }
 
 /** Controleert een nieuwe oefening tegen de ingebouwde lijst en je eigen oefeningen (hoofdletter- en koppeltekenongevoelig). */
@@ -47,7 +57,8 @@ export function validateNewExercise(input: NewExerciseInput, existing: Exercise[
   const name = cleanName(input.name);
   if (name.length < MIN_NAME) return { ok: false, message: `Geef de oefening een naam van minstens ${MIN_NAME} tekens.` };
   if (name.length > MAX_NAME) return { ok: false, message: `De naam mag maximaal ${MAX_NAME} tekens zijn.` };
-  if (!isMuscleGroup(input.muscleGroup)) return { ok: false, message: "Kies een spiergroep." };
+  const kind: ExerciseKind = (EXERCISE_KINDS as readonly unknown[]).includes(input.kind) ? (input.kind as ExerciseKind) : "strength";
+  if (kind !== "cardio" && !isMuscleGroup(input.muscleGroup)) return { ok: false, message: "Kies een spiergroep." };
   const equipment = cleanName(input.equipment ?? "");
   if (equipment.length > MAX_EQUIPMENT) return { ok: false, message: `Het apparaat mag maximaal ${MAX_EQUIPMENT} tekens zijn.` };
   const same = existing.find((e) => isSameExercise(e.name, name));
@@ -56,8 +67,10 @@ export function validateNewExercise(input: NewExerciseInput, existing: Exercise[
     ok: true,
     value: {
       name,
-      muscleGroup: input.muscleGroup,
-      pplCategory: defaultPplFor(input.muscleGroup),
+      ...(kind !== "strength" ? { kind } : {}),
+      ...(kind === "cardio"
+        ? CARDIO_FILLER
+        : { muscleGroup: input.muscleGroup as MuscleGroup, pplCategory: defaultPplFor(input.muscleGroup as MuscleGroup) }),
       ...(equipment ? { equipment } : {}),
     },
   };
@@ -67,13 +80,19 @@ export function validateNewExercise(input: NewExerciseInput, existing: Exercise[
 export function parseCustomExercise(id: string, data: Record<string, unknown>): CustomExercise | null {
   const name = typeof data.name === "string" ? cleanName(data.name) : "";
   if (name.length < MIN_NAME || name.length > MAX_NAME) return null;
-  if (!isMuscleGroup(data.muscleGroup)) return null;
+  const kind: ExerciseKind | undefined = data.kind === "time" || data.kind === "cardio" ? data.kind : undefined;
+  if (kind !== "cardio" && !isMuscleGroup(data.muscleGroup)) return null;
   const equipment = typeof data.equipment === "string" ? cleanName(data.equipment).slice(0, MAX_EQUIPMENT) : "";
   return {
     id,
     name,
-    muscleGroup: data.muscleGroup,
-    pplCategory: isPpl(data.pplCategory) ? data.pplCategory : defaultPplFor(data.muscleGroup),
+    ...(kind ? { kind } : {}),
+    ...(kind === "cardio"
+      ? CARDIO_FILLER
+      : {
+          muscleGroup: data.muscleGroup as MuscleGroup,
+          pplCategory: isPpl(data.pplCategory) ? data.pplCategory : defaultPplFor(data.muscleGroup as MuscleGroup),
+        }),
     ...(equipment ? { equipment } : {}),
     createdAt: typeof data.createdAt === "string" ? data.createdAt : "",
     custom: true,
@@ -85,7 +104,8 @@ export const sortByName = <T extends Exercise>(list: T[]): T[] =>
 
 /** Ingebouwde en eigen oefeningen samen; bij gelijke naam wint de ingebouwde. */
 export function mergeCatalog(custom: CustomExercise[]): Exercise[] {
-  const extra = custom.filter((c) => !builtIn.some((b) => isSameExercise(b.name, c.name)));
+  // Cardio-oefeningen horen niet in de krachtlijst; die staan in `cardioActivities`.
+  const extra = custom.filter((c) => c.kind !== "cardio" && !builtIn.some((b) => isSameExercise(b.name, c.name)));
   return [...builtIn, ...sortByName(extra)];
 }
 
@@ -95,4 +115,12 @@ export function searchIn(list: Exercise[], query: string): Exercise[] {
   return list.filter(
     (e) => e.name.toLowerCase().includes(q) || e.muscleGroup.toLowerCase().includes(q) || e.equipment?.toLowerCase().includes(q)
   );
+}
+
+/** Cardiosoorten: de standaardlijst plus je eigen cardio-oefeningen, zonder dubbelen. */
+export function cardioActivities(custom: CustomExercise[], standard: readonly string[]): string[] {
+  const own = custom.filter((c) => c.kind === "cardio").map((c) => c.name);
+  const out = [...standard];
+  for (const name of own) if (!out.some((s) => isSameExercise(s, name))) out.push(name);
+  return out;
 }

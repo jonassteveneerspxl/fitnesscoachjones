@@ -31,8 +31,10 @@ export interface SetLike {
 export const EXERCISE_KINDS = ["strength", "time", "cardio"] as const;
 export type ExerciseKind = (typeof EXERCISE_KINDS)[number];
 
+/** Standaard cardiosoorten. Eigen cardio-oefeningen komen erbij, dus de soort in opgeslagen data is gewone tekst. */
 export const CARDIO_ACTIVITIES = ["Lopen", "Fietsen", "Roeien", "Zwemmen", "Wandelen", "Andere"] as const;
-export type CardioActivity = (typeof CARDIO_ACTIVITIES)[number];
+export type CardioActivity = string;
+export const MAX_ACTIVITY_LENGTH = 60;
 
 /** Een cardio-onderdeel: afstand en tijd. Tempo en snelheid worden berekend, niet opgeslagen. */
 export interface CardioData {
