@@ -32,16 +32,18 @@ describe("normalisatie van tijd en cardio", () => {
     expect(issues.join(" ")).toMatch(/set 1 is ongeldig/);
   });
 
-  it("bewaart cardio met soort, afstand en tijd; een onbekende soort wordt 'Andere'", () => {
+  it("bewaart cardio met soort, afstand en tijd; een eigen soort blijft bewaard, een lege wordt 'Andere'", () => {
     const { workout } = normalizeWorkout({
       ...base,
       exercises: [
         { exercise: "Lopen", kind: "cardio", cardio: { activity: "Lopen", distanceKm: 10, durationSeconds: 3000 } },
         { exercise: "Skiën", kind: "cardio", cardio: { activity: "Skiën", distanceKm: -3, durationSeconds: 600 } },
+        { exercise: "X", kind: "cardio", cardio: { activity: "  ", distanceKm: 1, durationSeconds: 600 } },
       ],
     });
     expect(workout!.exercises[0]).toMatchObject({ kind: "cardio", cardio: { activity: "Lopen", distanceKm: 10, durationSeconds: 3000 }, sets: [] });
-    expect(workout!.exercises[1].cardio).toEqual({ activity: "Andere", distanceKm: 0, durationSeconds: 600 });
+    expect(workout!.exercises[1].cardio).toEqual({ activity: "Skiën", distanceKm: 0, durationSeconds: 600 });
+    expect(workout!.exercises[2].cardio?.activity).toBe("Andere");
   });
 
   it("laat cardio zonder geldige duur vallen", () => {

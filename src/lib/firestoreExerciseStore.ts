@@ -12,12 +12,13 @@ export function createFirestoreExerciseStore(db: Firestore, uid: string): Exerci
       );
     },
     put(exercise) {
-      const { id, name, muscleGroup, pplCategory, equipment, createdAt } = exercise;
+      const { id, name, muscleGroup, pplCategory, equipment, createdAt, kind } = exercise;
+      const isCardio = kind === "cardio";
       return setDoc(doc(db, "users", uid, "exercises", id), {
         id,
         name,
-        muscleGroup,
-        pplCategory,
+        ...(kind ? { kind } : {}),
+        ...(isCardio ? {} : { muscleGroup, pplCategory }),
         ...(equipment ? { equipment } : {}),
         createdAt,
       });

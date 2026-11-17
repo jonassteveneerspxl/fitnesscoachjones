@@ -1,3 +1,6 @@
+import { CARDIO_ACTIVITIES, ExerciseKind } from "@/types/workout";
+import { suggestKind } from "@/utils/exerciseForm";
+import { isSameExercise } from "@/utils/exerciseNames";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Exercise, exercises as builtIn } from "@/data/exercises";
@@ -5,6 +8,7 @@ import {
   CustomExercise,
   MAX_CUSTOM_EXERCISES,
   NewExerciseInput,
+  cardioActivities,
   mergeCatalog,
   parseCustomExercise,
   validateNewExercise,
@@ -28,6 +32,10 @@ export interface ExerciseCatalog {
   /** Ingebouwde + eigen oefeningen. */
   all: Exercise[];
   custom: CustomExercise[];
+  /** Standaard cardiosoorten plus je eigen cardio-oefeningen. */
+  cardioActivities: string[];
+  /** Soort van een oefening op naam: je eigen keuze bij eigen oefeningen, anders afgeleid van de naam (plank, deadhang…). */
+  kindOf(name: string): ExerciseKind;
   /** `false` zonder opslag (bv. in tests): dan kan er niets worden toegevoegd. */
   canAdd: boolean;
   addExercise(input: NewExerciseInput): AddResult;
@@ -37,6 +45,8 @@ export interface ExerciseCatalog {
 const staticCatalog: ExerciseCatalog = {
   all: builtIn,
   custom: [],
+  cardioActivities: [...CARDIO_ACTIVITIES],
+  kindOf: (name) => suggestKind(name),
   canAdd: false,
   addExercise: () => ({ ok: false, message: "Eigen oefeningen zijn hier niet beschikbaar." }),
   removeExercise: () => undefined,
@@ -98,7 +108,15 @@ export function ExerciseCatalogProvider({ store, children }: { store: ExerciseSt
   );
 
   const value = useMemo<ExerciseCatalog>(
-    () => ({ all, custom, canAdd: true, addExercise, removeExercise }),
+    () => ({
+      all,
+      custom,
+      cardioActivities: cardioActivities(custom, CARDIO_ACTIVITIES),
+      kindOf: (name: string) => custom.find((c) => isSameExercise(c.name, name))?.kind ?? suggestKind(name),
+      canAdd: true,
+      addExercise,
+      removeExercise,
+    }),
     [all, custom, addExercise, removeExercise]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

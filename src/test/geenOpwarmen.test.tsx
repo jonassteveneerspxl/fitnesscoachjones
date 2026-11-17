@@ -26,7 +26,7 @@ describe("geen opwarmsets en geen rusttimer meer", () => {
     const prev = makeWorkout({ id: "p", startedAt: "2026-10-13T10:00:00.000Z", exercises: [makeExercise("Bench Press", [[40, 10], [100, 5]])] });
     render(<WorkoutForm onSubmit={vi.fn()} history={[prev]} />);
     fireEvent.change(screen.getByLabelText("Oefening"), { target: { value: "Bench Press" } });
-    expect(screen.queryByRole("button", { name: /opwarm/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^opwarmen$/i })).toBeNull();
     expect(screen.queryByText(/lichte sets/i)).toBeNull();
     const ticks = screen.getAllByRole("checkbox");
     fireEvent.click(ticks[0]);

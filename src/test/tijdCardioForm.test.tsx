@@ -54,7 +54,7 @@ describe("tijdoefeningen en cardio in het formulier", () => {
     expect(screen.queryByLabelText("Oefening")).toBeNull();
     expect(screen.getByLabelText(/afstand/i)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^(kracht|tijd)$/i })).toBeNull();
-    expect(screen.getByRole("button", { name: /cardio toevoegen/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^cardio toevoegen$/i })).toBeTruthy();
   });
 
   it("een leeg cardioblok verdwijnt weer als je het type terug wijzigt", () => {
@@ -72,20 +72,20 @@ describe("tijdoefeningen en cardio in het formulier", () => {
     fireEvent.change(screen.getByLabelText("Oefening"), { target: { value: "Bench Press" } });
     fireEvent.change(screen.getByPlaceholderText("Gewicht"), { target: { value: "60" } });
     fireEvent.change(screen.getByPlaceholderText("Reps"), { target: { value: "5" } });
-    fireEvent.click(screen.getByRole("button", { name: /cardio toevoegen/i }));
+    fireEvent.click(screen.getByRole("button", { name: /cardio \/ opwarmen toevoegen/i }));
     fireEvent.change(screen.getByLabelText(/afstand/i), { target: { value: "2" } });
     fireEvent.change(screen.getByLabelText("Tijd"), { target: { value: "10" } });
     save();
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
     const [exercises] = onSubmit.mock.calls[0];
-    expect(exercises.map((e: { exercise: string }) => e.exercise)).toEqual(["Bench Press", "Lopen"]);
+    expect(exercises.map((e: { exercise: string }) => e.exercise)).toEqual(["Lopen", "Bench Press"]);
   });
 
   it("cardio als eerste (warming-up) vervangt de lege oefening en komt vóór de krachtoefeningen", async () => {
     const onSubmit = vi.fn().mockResolvedValue(true);
     render(<WorkoutForm onSubmit={onSubmit} />);
     fireEvent.change(screen.getByLabelText("Trainingstype"), { target: { value: "Push" } });
-    fireEvent.click(screen.getByRole("button", { name: /cardio toevoegen/i }));
+    fireEvent.click(screen.getByRole("button", { name: /cardio \/ opwarmen toevoegen/i }));
     fireEvent.change(screen.getByLabelText(/afstand/i), { target: { value: "2" } });
     fireEvent.change(screen.getByLabelText("Tijd"), { target: { value: "10" } });
     fireEvent.click(screen.getByRole("button", { name: /^oefening toevoegen$/i }));

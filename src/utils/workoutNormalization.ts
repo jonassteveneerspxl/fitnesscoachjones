@@ -1,6 +1,6 @@
 import {
-  CARDIO_ACTIVITIES,
   CardioActivity,
+  MAX_ACTIVITY_LENGTH,
   CardioData,
   ExerciseKind,
   ExerciseLog,
@@ -53,7 +53,8 @@ function nextSetNumber(s: Record<string, unknown>, index: number, used: Set<numb
 function normalizeCardio(raw: unknown): CardioData | null {
   if (!isRecord(raw) || !isFiniteNumber(raw.durationSeconds) || raw.durationSeconds < 1) return null;
   const distance = isFiniteNumber(raw.distanceKm) && raw.distanceKm >= 0 ? raw.distanceKm : 0;
-  const activity = (CARDIO_ACTIVITIES as readonly unknown[]).includes(raw.activity) ? (raw.activity as CardioActivity) : "Andere";
+  const text = typeof raw.activity === "string" ? raw.activity.replace(/\s+/g, " ").trim() : "";
+  const activity: CardioActivity = text.length >= 1 && text.length <= MAX_ACTIVITY_LENGTH ? text : "Andere";
   return { activity, distanceKm: distance, durationSeconds: Math.round(raw.durationSeconds) };
 }
 

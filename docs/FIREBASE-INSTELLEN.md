@@ -24,6 +24,11 @@ Test in de **Rules Playground** (die kan ik vanuit mijn omgeving niet uitvoeren)
 - Zelfde pad ingelogd als een andere uid, of niet ingelogd → geweigerd.
 - Verwijderen (delete) → altijd geweigerd.
 
+### Bijgewerkte regels (soort van eigen oefeningen)
+Eigen oefeningen kunnen nu een soort hebben: kracht, houden (tijd) of cardio. Daarvoor staat er een extra veld `kind` in
+`firestore.rules`. **Publiceer de regels opnieuw** (plak het hele bestand en klik Publish), anders weigert Firestore het
+opslaan van een eigen cardio- of houd-oefening. Bestaande eigen oefeningen blijven gewoon werken.
+
 ### Bijgewerkte regels (eigen oefeningen)
 Sinds de functie "Eigen oefening toevoegen" bevat `firestore.rules` ook een blok voor `users/{uid}/exercises`.
 **Publiceer de regels opnieuw** (plak het hele bestand en klik Publish), anders krijg je bij het toevoegen de melding

@@ -9,7 +9,7 @@
  * statistieken en raakt de opgeslagen workouts niet aan. Alle functies gooien nooit een fout; opslag die niet
  * beschikbaar of vol is, betekent alleen dat er geen concept bewaard wordt.
  */
-import { CARDIO_ACTIVITIES, CardioActivity, EXERCISE_KINDS, ExerciseKind, SELECTABLE_TRAINING_TYPES, TrainingType } from "@/types/workout";
+import { CardioActivity, EXERCISE_KINDS, MAX_ACTIVITY_LENGTH, ExerciseKind, SELECTABLE_TRAINING_TYPES, TrainingType } from "@/types/workout";
 import type { StorageLike } from "@/utils/workoutStorage";
 
 export const DRAFT_KEY = "fitness-coach-draft-v1";
@@ -53,6 +53,8 @@ export interface DraftExercise {
   exercise: string;
   kind?: ExerciseKind;
   cardio?: DraftCardio;
+  /** Alleen `false` wordt bewaard: cardio-voorstel van vorige keer dat nog niet bevestigd is. */
+  cardioDone?: boolean;
   sets: DraftSet[];
   notes: string;
   isExpanded: boolean;
@@ -95,15 +97,17 @@ function parseExercise(raw: unknown): DraftExercise | null {
   const kind = EXERCISE_KINDS.includes(raw.kind as ExerciseKind) && raw.kind !== "strength" ? (raw.kind as ExerciseKind) : undefined;
   let cardio: DraftCardio | undefined;
   if (isRecord(raw.cardio) && isText(raw.cardio.distance) && isText(raw.cardio.duration)) {
-    const activity = (CARDIO_ACTIVITIES as readonly unknown[]).includes(raw.cardio.activity)
-      ? (raw.cardio.activity as CardioActivity)
-      : "Andere";
+    const activity: CardioActivity =
+      typeof raw.cardio.activity === "string" && raw.cardio.activity.trim() !== "" && raw.cardio.activity.length <= MAX_ACTIVITY_LENGTH
+        ? raw.cardio.activity
+        : "Andere";
     cardio = { activity, distance: raw.cardio.distance, duration: raw.cardio.duration };
   }
   return {
     exercise: raw.exercise,
     ...(kind ? { kind } : {}),
     ...(cardio ? { cardio } : {}),
+    ...(cardio && raw.cardioDone === false ? { cardioDone: false as const } : {}),
     sets,
     // Een te lange notitie wordt ingekort in plaats van het hele concept te weigeren: de sets gaan voor.
     notes: typeof raw.notes === "string" ? raw.notes.slice(0, MAX_TEXT) : "",
@@ -175,6 +179,7 @@ export function saveDraft(
         exercise: ex.exercise,
         ...(ex.kind && ex.kind !== "strength" ? { kind: ex.kind } : {}),
         ...(ex.cardio ? { cardio: { ...ex.cardio } } : {}),
+        ...(ex.cardio && ex.cardioDone === false ? { cardioDone: false as const } : {}),
         sets: ex.sets.map(copySet),
         notes: ex.notes,
         isExpanded: ex.isExpanded,
