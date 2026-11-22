@@ -119,7 +119,7 @@ const Index = () => {
     storageInfo.status === "unavailable";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       <AppHeader />
 
       <main className="container max-w-2xl pt-6 pb-24 space-y-8">

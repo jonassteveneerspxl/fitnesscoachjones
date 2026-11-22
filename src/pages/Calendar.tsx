@@ -35,7 +35,7 @@ const CalendarPage = ({ today }: CalendarPageProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       <AppHeader containerClassName="max-w-3xl" />
       <main className="container max-w-3xl pt-6 pb-24 space-y-6">
         {storageInfo.warnings.length > 0 && (

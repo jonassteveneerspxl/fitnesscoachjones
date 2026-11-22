@@ -145,7 +145,7 @@ const Statistics = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         {header}
         <main className="container max-w-3xl pt-6 pb-24">
           <p className="text-sm text-muted-foreground">Gegevens laden…</p>
@@ -156,7 +156,7 @@ const Statistics = () => {
 
   if (workouts.length === 0) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         {header}
         <main className="container max-w-3xl pt-6 pb-24">
           <section className="p-8 rounded-2xl gradient-card border border-border text-center space-y-3">
@@ -179,7 +179,7 @@ const Statistics = () => {
     sessions.length === 0 ? "Geen workouts voor deze selectie." : "Geen setgegevens (gewicht en herhalingen) voor deze selectie.";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       {header}
 
       <main className="container max-w-3xl pt-6 pb-24 space-y-6">

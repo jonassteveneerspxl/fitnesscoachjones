@@ -642,7 +642,8 @@ export function WorkoutForm({
                   e.stopPropagation();
                   removeExercise(exIndex);
                 }}
-                className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                aria-label="Oefening verwijderen"
+                className="p-2.5 -m-1.5 text-muted-foreground hover:text-destructive transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -764,9 +765,10 @@ export function WorkoutForm({
                       <button
                         type="button"
                         onClick={() => removeSet(exIndex, setIndex)}
-                        className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                        aria-label={`Set ${setIndex + 1} verwijderen`}
+                        className="p-3 -m-1 text-muted-foreground hover:text-destructive transition-colors"
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-4 h-4" />
                       </button>
                     )}
                   </div>
