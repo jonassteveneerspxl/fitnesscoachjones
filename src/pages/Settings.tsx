@@ -10,7 +10,7 @@ const Settings = () => {
   const { workouts, storageInfo, importWorkouts } = useWorkoutLogs();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       <AppHeader />
       <main className="container max-w-2xl pt-6 pb-24 space-y-8">
         <h2 className="text-xl font-semibold text-foreground">Instellingen</h2>

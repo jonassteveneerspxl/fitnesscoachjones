@@ -3,11 +3,14 @@ import { Check, ChevronDown, Search, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useBackToClose } from "@/hooks/useBackToClose";
+import { useVisualViewport } from "@/hooks/useVisualViewport";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -39,12 +42,20 @@ interface ExerciseSelectorProps {
   placeholder?: string;
 }
 
+/** Scrolbare lijst die de beschikbare hoogte opvult; native scrollen werkt het best met aanraking. */
+function ListArea({ children }: { children: React.ReactNode }) {
+  return <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">{children}</div>;
+}
+
 export function ExerciseSelector({
   value,
   onChange,
   placeholder = "Selecteer oefening",
 }: ExerciseSelectorProps) {
   const [open, setOpen] = useState(false);
+  useBackToClose(open, () => setOpen(false));
+  const viewport = useVisualViewport(open);
+  const isPhone = typeof window !== "undefined" && window.innerWidth < 640;
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"search" | "muscle" | "ppl">("search");
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup | null>(null);
@@ -89,8 +100,8 @@ export function ExerciseSelector({
 
   return (
     <>
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
@@ -107,10 +118,20 @@ export function ExerciseSelector({
           </div>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[320px] p-0" align="start">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-          <TabsList className="w-full grid grid-cols-3 rounded-none border-b">
+      </DialogTrigger>
+      <DialogContent
+        className="p-0 gap-0 flex flex-col top-0 translate-y-0 rounded-t-none max-w-none sm:max-w-md sm:top-[8%] sm:rounded-lg sm:max-h-[640px]"
+        style={isPhone ? { top: viewport.offsetTop, height: viewport.height } : undefined}
+        onOpenAutoFocus={(e) => {
+          // Zonder dit focust het venster de eerste tab; we focussen liever het zoekveld.
+          e.preventDefault();
+          (e.currentTarget as HTMLElement).querySelector<HTMLInputElement>("input")?.focus();
+        }}
+      >
+        <DialogTitle className="sr-only">Oefening kiezen</DialogTitle>
+        <DialogDescription className="sr-only">Zoek een oefening of kies per spiergroep of push, pull en legs.</DialogDescription>
+        <Tabs className="flex flex-col flex-1 min-h-0" value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+          <TabsList className="w-full grid grid-cols-3 rounded-none border-b h-12 pr-10">
             <TabsTrigger value="search" className="text-xs">
               <Search className="h-3 w-3 mr-1" />
               Zoeken
@@ -119,17 +140,18 @@ export function ExerciseSelector({
             <TabsTrigger value="ppl" className="text-xs">Push/Pull/Legs</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="search" className="mt-0">
+          <TabsContent value="search" className="mt-0 flex-1 min-h-0 flex-col data-[state=active]:flex">
             <div className="p-2 border-b">
               <Input
                 placeholder="Zoek oefening..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 text-sm"
-                autoFocus
+                className="h-11 text-base sm:text-sm"
+                enterKeyHint="search"
+                autoComplete="off"
               />
             </div>
-            <ScrollArea className="h-[250px]">
+            <ListArea>
               {searchQuery ? (
                 filteredExercises.length > 0 ? (
                   <div className="p-1">
@@ -159,12 +181,12 @@ export function ExerciseSelector({
                   Begin te typen om te zoeken
                 </div>
               )}
-            </ScrollArea>
+            </ListArea>
           </TabsContent>
 
-          <TabsContent value="muscle" className="mt-0">
+          <TabsContent value="muscle" className="mt-0 flex-1 min-h-0 flex-col data-[state=active]:flex">
             {!selectedMuscle ? (
-              <ScrollArea className="h-[280px]">
+              <ListArea>
                 <div className="p-2 grid grid-cols-2 gap-1">
                   {(Object.keys(muscleGroupLabels) as MuscleGroup[]).map((muscle) => (
                     <Button
@@ -181,7 +203,7 @@ export function ExerciseSelector({
                     </Button>
                   ))}
                 </div>
-              </ScrollArea>
+              </ListArea>
             ) : (
               <>
                 <div className="p-2 border-b flex items-center gap-2">
@@ -195,7 +217,7 @@ export function ExerciseSelector({
                   </Button>
                   <Badge variant="outline">{muscleGroupLabels[selectedMuscle]}</Badge>
                 </div>
-                <ScrollArea className="h-[240px]">
+                <ListArea>
                   <div className="p-1">
                     {filteredExercises.map((exercise) => (
                       <ExerciseItem
@@ -207,14 +229,14 @@ export function ExerciseSelector({
                       />
                     ))}
                   </div>
-                </ScrollArea>
+                </ListArea>
               </>
             )}
           </TabsContent>
 
-          <TabsContent value="ppl" className="mt-0">
+          <TabsContent value="ppl" className="mt-0 flex-1 min-h-0 flex-col data-[state=active]:flex">
             {!selectedPPL ? (
-              <div className="p-4 space-y-2">
+              <div className="p-4 space-y-2 overflow-y-auto">
                 {(Object.keys(pplLabels) as PPLCategory[]).map((ppl) => (
                   <Button
                     key={ppl}
@@ -247,7 +269,7 @@ export function ExerciseSelector({
                   </Button>
                   <Badge variant="outline">{pplLabels[selectedPPL]}</Badge>
                 </div>
-                <ScrollArea className="h-[240px]">
+                <ListArea>
                   <div className="p-1">
                     {filteredExercises.map((exercise) => (
                       <ExerciseItem
@@ -259,7 +281,7 @@ export function ExerciseSelector({
                       />
                     ))}
                   </div>
-                </ScrollArea>
+                </ListArea>
               </>
             )}
           </TabsContent>
@@ -272,8 +294,8 @@ export function ExerciseSelector({
             </Button>
           </div>
         )}
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
     <AddExerciseDialog
       open={addOpen}
       onOpenChange={setAddOpen}

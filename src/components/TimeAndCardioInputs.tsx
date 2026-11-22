@@ -58,7 +58,7 @@ export function TimeSetsEditor({ sets, onChange }: TimeSetsProps) {
               <button
                 type="button"
                 aria-label={`Set ${i + 1} verwijderen`}
-                className="p-1 text-muted-foreground hover:text-destructive"
+                className="p-2.5 -m-1 text-muted-foreground hover:text-destructive"
                 onClick={() => onChange(sets.filter((_, j) => j !== i))}
               >
                 <X className="w-4 h-4" />
@@ -113,7 +113,7 @@ export function CardioEditor({
         <Label htmlFor="cardio-soort" className="text-sm text-muted-foreground">Soort</Label>
         <select
           id="cardio-soort"
-          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+          className="h-11 w-full rounded-md border border-input bg-background px-3 text-base sm:text-sm"
           value={value.activity}
           onChange={(e) => onChange({ ...value, activity: e.target.value as CardioActivity })}
         >

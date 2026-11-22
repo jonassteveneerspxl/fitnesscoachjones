@@ -98,3 +98,21 @@
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
+
+
+/* Mobiel: geen ingezoomde pagina na tikken, geen vertraging bij tikken, en geen per ongeluk herladen door omlaag te trekken. */
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-bottom: 14rem; /* een veld waar je op tikt schuift boven het toetsenbord */
+}
+body {
+  overscroll-behavior-y: none;
+}
+button,
+a,
+[role="button"],
+[role="checkbox"],
+select,
+summary {
+  touch-action: manipulation;
+}

@@ -16,7 +16,7 @@ export function InfoTip({ term, children }: Props) {
         <button
           type="button"
           aria-label={`Uitleg: ${term}`}
-          className="inline-flex items-center justify-center align-middle ml-1 h-5 w-5 rounded-full text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center justify-center align-middle ml-0.5 h-8 w-8 -my-2 rounded-full text-muted-foreground hover:text-foreground"
         >
           <Info className="w-3.5 h-3.5" />
         </button>

@@ -32,7 +32,7 @@ export const EXERCISE_KINDS = ["strength", "time", "cardio"] as const;
 export type ExerciseKind = (typeof EXERCISE_KINDS)[number];
 
 /** Standaard cardiosoorten. Eigen cardio-oefeningen komen erbij, dus de soort in opgeslagen data is gewone tekst. */
-export const CARDIO_ACTIVITIES = ["Lopen", "Fietsen", "Roeien", "Zwemmen", "Wandelen", "Andere"] as const;
+export const CARDIO_ACTIVITIES = ["Lopen", "Fietsen", "Roeien", "Zwemmen", "Wandelen", "Stairmaster", "Andere"] as const;
 export type CardioActivity = string;
 export const MAX_ACTIVITY_LENGTH = 60;
 

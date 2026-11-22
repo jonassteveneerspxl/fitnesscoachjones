@@ -1,3 +1,4 @@
+import { useKeyboardOpen } from "@/hooks/useVisualViewport";
 import { BarChart3, CalendarDays, Dumbbell } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,7 @@ const tabClass =
 const activeClass = "bg-primary/15 text-primary hover:text-primary";
 
 export function AppHeader({ containerClassName = "max-w-2xl" }: AppHeaderProps) {
+  const keyboardOpen = useKeyboardOpen();
   return (
     <>
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
@@ -28,7 +30,10 @@ export function AppHeader({ containerClassName = "max-w-2xl" }: AppHeaderProps) 
       </header>
       {/* Onderaan het scherm: makkelijk te bereiken met je duim. De pagina's laten hier ruimte voor. */}
       <nav
-        className="fixed bottom-0 inset-x-0 z-10 border-t border-border bg-card/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom)]"
+        className={cn(
+          "fixed bottom-0 inset-x-0 z-10 border-t border-border bg-card/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom)]",
+          keyboardOpen && "hidden" // het toetsenbord laat al weinig ruimte over
+        )}
         aria-label="Hoofdnavigatie"
       >
         <div className={cn("container flex gap-2 py-2", containerClassName)}>
