@@ -30,6 +30,7 @@ import {
   MutationError,
   MutationResult,
   WorkoutChanges,
+  applyChanges,
   WorkoutRepository,
   sortWorkoutsNewestFirst,
 } from "@/utils/workoutStorage";
@@ -250,7 +251,7 @@ export function createRemoteWorkoutRepository(options: RemoteRepositoryOptions):
       if (blocked) return blocked;
       const existing = state.workouts.find((w) => w.id === id);
       if (!existing) return fail("not-found", "Workout niet gevonden.");
-      const candidate = normalizeWorkout({ ...existing, trainingType: changes.trainingType, exercises: changes.exercises });
+      const candidate = normalizeWorkout(applyChanges(existing, changes));
       if (!candidate.workout) return fail("invalid", `Ongeldige wijziging: ${candidate.issues.join("; ")}`);
       // Onveranderlijk: id, gebruiker, starttijd, tijdzone, aanmaakmoment.
       const updated = withDerivedTotals({

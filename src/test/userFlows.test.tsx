@@ -66,6 +66,9 @@ async function logWorkout(opts: {
     fireEvent.change(reps[i], { target: { value: opts.sets[i][1] } });
   }
   fireEvent.click(scope.getByRole("button", { name: /training opslaan/i }));
+  // Na het opslaan vraagt de app "Hoe ging het?": in deze flows slaan we dat over.
+  const skip = await screen.findByRole("button", { name: /overslaan/i }).catch(() => null);
+  if (skip) fireEvent.click(skip);
 }
 
 beforeEach(() => {

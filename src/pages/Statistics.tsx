@@ -10,6 +10,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChartCard } from "@/components/stats/ChartCard";
 import { MetricChart, MetricDatum } from "@/components/stats/MetricChart";
+import { RatingSection } from "@/components/stats/RatingSection";
+import { ratingStats } from "@/utils/rating";
 import { OverviewSection } from "@/components/stats/OverviewSection";
 import { CollapsibleSection } from "@/components/stats/CollapsibleSection";
 import { StatsFilters } from "@/components/stats/StatsFilters";
@@ -86,6 +88,7 @@ const Statistics = () => {
   const weeks = useMemo(() => compareWeeks(built.sessions, today), [built.sessions, today]);
   const cardioWeeks = useMemo(() => compareCardioWeeks(built.sessions, today), [built.sessions, today]);
   const timed = useMemo(() => timedProgress(built.sessions), [built.sessions]);
+  const ratings = useMemo(() => ratingStats(built.sessions, today), [built.sessions, today]);
   const recent = useMemo(() => recentRecords(built.sessions, today), [built.sessions, today]);
   const trends = useMemo(() => exerciseTrends(built.sessions, today), [built.sessions, today]);
   const summary = useMemo(() => summarize(sessions), [sessions]);
@@ -191,6 +194,8 @@ const Statistics = () => {
             </AlertDescription>
           </Alert>
         )}
+
+        <RatingSection stats={ratings} />
 
         <OverviewSection
           weeks={weeks}

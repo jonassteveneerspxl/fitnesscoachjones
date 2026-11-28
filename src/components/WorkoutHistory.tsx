@@ -1,3 +1,4 @@
+import { RatingBadge } from "@/components/RatingBadge";
 import { describeNonStrength } from "@/utils/cardio";
 import { trainingTypeLabel } from "@/utils/trainingTypeLabel";
 import { Workout } from "@/types/workout";
@@ -11,10 +12,12 @@ interface WorkoutHistoryProps {
   workouts: Workout[];
   /** Zonder deze handlers is de lijst alleen-lezen (bv. op de statistiekenpagina). */
   onEdit?: (workout: Workout) => void;
+  /** Geeft of wijzigt de beoordeling van een training. */
+  onRate?: (workout: Workout) => void;
   onDelete?: (workout: Workout) => void;
 }
 
-export function WorkoutHistory({ workouts, onEdit, onDelete }: WorkoutHistoryProps) {
+export function WorkoutHistory({ workouts, onEdit, onRate, onDelete }: WorkoutHistoryProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (workouts.length === 0) {
@@ -56,6 +59,7 @@ export function WorkoutHistory({ workouts, onEdit, onDelete }: WorkoutHistoryPro
                       {trainingTypeLabel(workout.trainingType)}
                     </Badge>
                   )}
+                  <RatingBadge rating={workout.rating} />
                 </div>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Calendar className="w-3 h-3 shrink-0" />
@@ -123,8 +127,13 @@ export function WorkoutHistory({ workouts, onEdit, onDelete }: WorkoutHistoryPro
                 </div>
               ))}
 
-              {(onEdit || onDelete) && (
-                <div className="flex gap-2 pt-1">
+              {(onEdit || onRate || onDelete) && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {onRate && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => onRate(workout)}>
+                      {workout.rating ? "Beoordeling wijzigen" : "Beoordeel deze training"}
+                    </Button>
+                  )}
                   {onEdit && (
                     <Button
                       type="button"

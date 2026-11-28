@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RatingSheet } from "@/components/RatingSheet";
 import { WelcomeCard } from "@/components/WelcomeCard";
 import { useOptionalAuth } from "@/context/AuthContext";
 import { useWorkoutLogs } from "@/hooks/useWorkoutLogs";
@@ -42,6 +43,8 @@ const Index = () => {
   const [coachResponse, setCoachResponse] = useState<CoachResponse | null>(null);
   const [editing, setEditing] = useState<Workout | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Workout | null>(null);
+  /** Training waarvoor we de beoordeling vragen (net opgeslagen, of via de knop in de historiek). */
+  const [ratingTarget, setRatingTarget] = useState<Workout | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [dismissedWarnings, setDismissedWarnings] = useState(false);
 
@@ -68,7 +71,17 @@ const Index = () => {
       return false;
     }
     setCoachResponse(response);
+    setRatingTarget(newWorkout);
     return true;
+  };
+
+  const saveRating = async (rating: number) => {
+    const target = ratingTarget;
+    setRatingTarget(null);
+    if (!target) return;
+    const result = await updateWorkout(target.id, { rating });
+    if (!result.ok) toast.error(result.message ?? "Beoordeling opslaan mislukt.");
+    else toast.success("Beoordeling opgeslagen.");
   };
 
   const handleEditSubmit = async (
@@ -171,6 +184,7 @@ const Index = () => {
           <WorkoutHistory
             workouts={visibleWorkouts}
             onEdit={storageInfo.readOnly ? undefined : setEditing}
+            onRate={storageInfo.readOnly ? undefined : setRatingTarget}
             onDelete={storageInfo.readOnly ? undefined : setPendingDelete}
           />
           {workouts.length > 5 && (
@@ -185,6 +199,13 @@ const Index = () => {
           )}
         </section>
       </main>
+
+      <RatingSheet
+        open={!!ratingTarget}
+        initial={ratingTarget?.rating}
+        onSave={(r) => void saveRating(r)}
+        onSkip={() => setRatingTarget(null)}
+      />
 
       {/* Bewerken */}
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>

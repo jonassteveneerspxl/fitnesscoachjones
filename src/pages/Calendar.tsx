@@ -1,3 +1,4 @@
+import { isValidRating, ratingEmoji } from "@/utils/rating";
 import { useMemo, useState } from "react";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
@@ -14,6 +15,12 @@ const WEEKDAYS = ["ma", "di", "wo", "do", "vr", "za", "zo"];
 interface CalendarPageProps {
   /** Alleen voor tests: vaste "vandaag" (`YYYY-MM-DD`). */
   today?: string;
+}
+
+/** Gemiddelde beoordeling van de trainingen op een dag, of `null` als er geen is. */
+function dayRating(sessions: { workout: { rating?: number } }[]): number | null {
+  const r = sessions.map((s) => s.workout.rating).filter(isValidRating);
+  return r.length ? Math.round(r.reduce((a, b) => a + b, 0) / r.length) : null;
 }
 
 const CalendarPage = ({ today }: CalendarPageProps) => {
@@ -123,7 +130,13 @@ const CalendarPage = ({ today }: CalendarPageProps) => {
                           <span className="font-medium">{day.day}</span>
                           {trained && (
                             <>
-                              <Check className="w-3.5 h-3.5 text-primary" aria-hidden />
+                              {dayRating(day.sessions) !== null ? (
+                                <span className="text-sm leading-none" aria-hidden>
+                                  {ratingEmoji(dayRating(day.sessions) as number)}
+                                </span>
+                              ) : (
+                                <Check className="w-3.5 h-3.5 text-primary" aria-hidden />
+                              )}
                               <span className="text-[9px] leading-none truncate max-w-full">
                                 {day.sessions.length > 1 ? `${day.sessions.length}×` : types[0]}
                               </span>
