@@ -72,9 +72,20 @@ export interface MutationResult {
   message?: string;
 }
 
+/** Wat er aan een bestaande training gewijzigd wordt; alleen de meegegeven velden. `rating: null` wist de beoordeling. */
 export interface WorkoutChanges {
-  trainingType: TrainingType;
-  exercises: ExerciseLog[];
+  trainingType?: TrainingType;
+  exercises?: ExerciseLog[];
+  rating?: number | null;
+}
+
+/** Past wijzigingen toe op een bestaande training, vóór de normalisatie. */
+export function applyChanges(existing: Workout, changes: WorkoutChanges): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...existing };
+  if (changes.trainingType !== undefined) merged.trainingType = changes.trainingType;
+  if (changes.exercises !== undefined) merged.exercises = changes.exercises;
+  if (changes.rating !== undefined) merged.rating = changes.rating === null ? undefined : changes.rating;
+  return merged;
 }
 
 export interface ImportOutcome {
@@ -347,11 +358,7 @@ export function createLocalStorageRepository(
       if (current.readOnly) return readOnlyFail(current);
       const existing = current.workouts.find((w) => w.id === id);
       if (!existing) return fail(current, "not-found", "Workout niet gevonden.");
-      const candidate = normalizeWorkout({
-        ...existing,
-        trainingType: changes.trainingType,
-        exercises: changes.exercises,
-      });
+      const candidate = normalizeWorkout(applyChanges(existing, changes));
       if (!candidate.workout) {
         return fail(current, "invalid", `Ongeldige wijziging: ${candidate.issues.join("; ")}`);
       }

@@ -23,6 +23,8 @@ export interface NormalizeResult {
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
+import { isValidRating } from "@/utils/rating";
+
 const isFiniteNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 
 /** Herberekent alle afgeleide velden uit de sets. */
@@ -154,6 +156,7 @@ export function normalizeWorkout(raw: unknown): NormalizeResult {
     timeZone: isValidTimeZone(raw.timeZone) ? raw.timeZone : null,
     trainingType,
     exercises,
+    ...(isValidRating(raw.rating) ? { rating: raw.rating } : {}),
     totalVolume: 0,
     createdAt: typeof raw.createdAt === "string" ? raw.createdAt : undefined,
     updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : undefined,

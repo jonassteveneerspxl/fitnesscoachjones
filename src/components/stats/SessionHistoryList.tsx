@@ -1,3 +1,4 @@
+import { RatingBadge } from "@/components/RatingBadge";
 import { trainingTypeLabel } from "@/utils/trainingTypeLabel";
 import { useState } from "react";
 import { Calendar, ChevronDown, ChevronUp } from "lucide-react";
@@ -45,6 +46,7 @@ export function SessionHistoryList({ sessions, allSessions }: SessionHistoryList
                       {trainingTypeLabel(s.trainingType)}
                     </Badge>
                   )}
+                  <RatingBadge rating={s.workout.rating} />
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {s.exercises.length} oefening{s.exercises.length === 1 ? "" : "en"}

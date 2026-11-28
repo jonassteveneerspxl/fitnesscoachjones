@@ -81,6 +81,8 @@ export interface Workout {
   totalVolume: number;
   createdAt?: string;
   updatedAt?: string;
+  /** Hoe de training ging, 1 (zware dag) tot 10 (topdag). Optioneel; afwezig = niet beoordeeld. */
+  rating?: number;
 }
 
 /** Een verwijderde workout, tijdelijk bewaard zodat verwijderen ongedaan gemaakt kan worden. */
