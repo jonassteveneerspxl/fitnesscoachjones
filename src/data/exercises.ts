@@ -326,14 +326,6 @@ export const exercises: Exercise[] = [
 ];
 
 // Helper functions
-export function getExercisesByMuscleGroup(muscleGroup: MuscleGroup): Exercise[] {
-  return exercises.filter((e) => e.muscleGroup === muscleGroup);
-}
-
-export function getExercisesByPPL(category: PPLCategory): Exercise[] {
-  return exercises.filter((e) => e.pplCategory === category);
-}
-
 export function searchExercises(query: string): Exercise[] {
   const lowerQuery = query.toLowerCase();
   return exercises.filter(
