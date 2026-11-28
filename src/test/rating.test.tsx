@@ -31,7 +31,7 @@ describe("rating model", () => {
     const withRating = applyChanges(base, { rating: 6 });
     expect(withRating.rating).toBe(6);
     expect(withRating.exercises).toEqual(base.exercises);
-    expect(applyChanges(withRating, { rating: null }).rating).toBeUndefined();
+    expect(applyChanges(withRating as Workout, { rating: null }).rating).toBeUndefined();
   });
 });
 
